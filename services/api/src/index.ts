@@ -6,3 +6,6 @@ export * from "./home";
 export * from "./watchnext";
 export * from "./pipeline";
 export * from "./analytics";
+export * from "./audit";
+export * from "./catalog";
+export * from "./users";

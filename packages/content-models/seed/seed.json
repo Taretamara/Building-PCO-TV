@@ -1,51 +1,1299 @@
 {
   "topics": [
-    { "id": "t-faith", "slug": "faith", "name": "Faith" },
-    { "id": "t-healing", "slug": "healing", "name": "Healing" },
-    { "id": "t-prayer", "slug": "prayer", "name": "Prayer" },
-    { "id": "t-spirit", "slug": "holy-spirit", "name": "Holy Spirit" },
-    { "id": "t-living", "slug": "christian-living", "name": "Christian Living" },
-    { "id": "t-family", "slug": "family", "name": "Family" },
-    { "id": "t-purpose", "slug": "purpose", "name": "Purpose" },
-    { "id": "t-evangelism", "slug": "evangelism", "name": "Evangelism" }
+    {
+      "id": "t-faith",
+      "slug": "faith",
+      "name": "Faith"
+    },
+    {
+      "id": "t-healing",
+      "slug": "healing",
+      "name": "Healing"
+    },
+    {
+      "id": "t-prayer",
+      "slug": "prayer",
+      "name": "Prayer"
+    },
+    {
+      "id": "t-spirit",
+      "slug": "holy-spirit",
+      "name": "Holy Spirit"
+    },
+    {
+      "id": "t-living",
+      "slug": "christian-living",
+      "name": "Christian Living"
+    },
+    {
+      "id": "t-family",
+      "slug": "family",
+      "name": "Family"
+    },
+    {
+      "id": "t-purpose",
+      "slug": "purpose",
+      "name": "Purpose"
+    },
+    {
+      "id": "t-evangelism",
+      "slug": "evangelism",
+      "name": "Evangelism"
+    }
   ],
   "programs": [
-    { "id": "p-healing-streams", "slug": "healing-streams", "title": "Healing Streams", "description": "Healing services with Pastor Chris.", "artwork": "16:9 placeholder" },
-    { "id": "p-your-loveworld", "slug": "your-loveworld", "title": "Your Loveworld", "description": "Seasonal teaching series.", "artwork": "16:9 placeholder" },
-    { "id": "p-communion", "slug": "global-communion", "title": "Global Communion", "description": "Monthly communion service.", "artwork": "16:9 placeholder" }
+    {
+      "id": "p-healing-streams",
+      "slug": "healing-streams",
+      "title": "Healing Streams",
+      "description": "Healing services with Pastor Chris.",
+      "artwork": "16:9 placeholder"
+    },
+    {
+      "id": "p-your-loveworld",
+      "slug": "your-loveworld",
+      "title": "Your Loveworld",
+      "description": "Seasonal teaching series.",
+      "artwork": "16:9 placeholder"
+    },
+    {
+      "id": "p-communion",
+      "slug": "global-communion",
+      "title": "Global Communion",
+      "description": "Monthly communion service.",
+      "artwork": "16:9 placeholder"
+    }
   ],
   "messages": [
-    { "id": "m-001", "title": "Faith That Prevails", "description": "Prevailing faith for daily victory.", "speaker": "Pastor Chris Oyakhilome", "programId": "p-your-loveworld", "topicIds": ["t-faith", "t-living"], "publishedAt": "2026-09-01", "durationSec": 2520, "artwork": "16:9", "status": "published", "featuredRank": 1 },
-    { "id": "m-002", "title": "Healing Streams Recap", "description": "Highlights and testimonies.", "speaker": "Pastor Chris Oyakhilome", "programId": "p-healing-streams", "topicIds": ["t-healing", "t-faith"], "publishedAt": "2026-09-05", "durationSec": 3480, "artwork": "16:9", "status": "published", "featuredRank": 2 },
-    { "id": "m-003", "title": "Your Loveworld S12E1", "description": "Opening teaching of the season.", "speaker": "Pastor Chris Oyakhilome", "programId": "p-your-loveworld", "topicIds": ["t-spirit", "t-purpose"], "publishedAt": "2026-09-08", "durationSec": 2100, "artwork": "16:9", "status": "published" },
-    { "id": "m-004", "title": "Global Communion September", "description": "Communion word and blessings.", "speaker": "Pastor Chris Oyakhilome", "programId": "p-communion", "topicIds": ["t-faith", "t-family"], "publishedAt": "2026-09-07", "durationSec": 2820, "artwork": "16:9", "status": "published" },
-    { "id": "m-005", "title": "The Holy Spirit in You", "description": "Walking with the Spirit daily.", "speaker": "Pastor Chris Oyakhilome", "programId": "p-your-loveworld", "topicIds": ["t-spirit", "t-living"], "publishedAt": "2026-08-25", "durationSec": 3060, "artwork": "16:9", "status": "published" },
-    { "id": "m-006", "title": "Prayer That Works", "description": "Effective fervent prayer.", "speaker": "Pastor Chris Oyakhilome", "programId": "p-your-loveworld", "topicIds": ["t-prayer"], "publishedAt": "2026-08-18", "durationSec": 2340, "artwork": "16:9", "status": "published" },
-    { "id": "m-007", "title": "Purpose and Calling", "description": "Discovering divine purpose.", "speaker": "Pastor Chris Oyakhilome", "programId": "p-your-loveworld", "topicIds": ["t-purpose", "t-evangelism"], "publishedAt": "2026-08-10", "durationSec": 2640, "artwork": "16:9", "status": "published" },
-    { "id": "m-008", "title": "Family and Faith", "description": "Building a faith-filled home.", "speaker": "Pastor Chris Oyakhilome", "programId": "p-communion", "topicIds": ["t-family", "t-living"], "publishedAt": "2026-07-28", "durationSec": 1980, "artwork": "16:9", "status": "published" }
+    {
+      "id": "m-001",
+      "title": "Faith That Prevails",
+      "description": "Prevailing faith for daily victory.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-your-loveworld",
+      "topicIds": [
+        "t-faith",
+        "t-living"
+      ],
+      "publishedAt": "2026-09-01",
+      "durationSec": 2520,
+      "artwork": "16:9",
+      "status": "published",
+      "featuredRank": 1
+    },
+    {
+      "id": "m-002",
+      "title": "Healing Streams Recap",
+      "description": "Highlights and testimonies.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-healing-streams",
+      "topicIds": [
+        "t-healing",
+        "t-faith"
+      ],
+      "publishedAt": "2026-09-05",
+      "durationSec": 3480,
+      "artwork": "16:9",
+      "status": "published",
+      "featuredRank": 2
+    },
+    {
+      "id": "m-003",
+      "title": "Your Loveworld S12E1",
+      "description": "Opening teaching of the season.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-your-loveworld",
+      "topicIds": [
+        "t-spirit",
+        "t-purpose"
+      ],
+      "publishedAt": "2026-09-08",
+      "durationSec": 2100,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-004",
+      "title": "Global Communion September",
+      "description": "Communion word and blessings.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-communion",
+      "topicIds": [
+        "t-faith",
+        "t-family"
+      ],
+      "publishedAt": "2026-09-07",
+      "durationSec": 2820,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-005",
+      "title": "The Holy Spirit in You",
+      "description": "Walking with the Spirit daily.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-your-loveworld",
+      "topicIds": [
+        "t-spirit",
+        "t-living"
+      ],
+      "publishedAt": "2026-08-25",
+      "durationSec": 3060,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-006",
+      "title": "Prayer That Works",
+      "description": "Effective fervent prayer.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-your-loveworld",
+      "topicIds": [
+        "t-prayer"
+      ],
+      "publishedAt": "2026-08-18",
+      "durationSec": 2340,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-007",
+      "title": "Purpose and Calling",
+      "description": "Discovering divine purpose.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-your-loveworld",
+      "topicIds": [
+        "t-purpose",
+        "t-evangelism"
+      ],
+      "publishedAt": "2026-08-10",
+      "durationSec": 2640,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-008",
+      "title": "Family and Faith",
+      "description": "Building a faith-filled home.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-communion",
+      "topicIds": [
+        "t-family",
+        "t-living"
+      ],
+      "publishedAt": "2026-07-28",
+      "durationSec": 1980,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-009",
+      "title": "Faith for the Harvest",
+      "description": "Faith for the Harvest — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-healing-streams",
+      "topicIds": [
+        "t-faith"
+      ],
+      "publishedAt": "2026-03-10",
+      "durationSec": 2870,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-010",
+      "title": "Unshakeable Faith",
+      "description": "Unshakeable Faith — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-your-loveworld",
+      "topicIds": [
+        "t-faith"
+      ],
+      "publishedAt": "2026-05-11",
+      "durationSec": 3007,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-011",
+      "title": "Faith Speaks",
+      "description": "Faith Speaks — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-communion",
+      "topicIds": [
+        "t-faith"
+      ],
+      "publishedAt": "2026-07-12",
+      "durationSec": 3144,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-012",
+      "title": "The Faith Life",
+      "description": "The Faith Life — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-healing-streams",
+      "topicIds": [
+        "t-faith"
+      ],
+      "publishedAt": "2026-01-13",
+      "durationSec": 3281,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-013",
+      "title": "Faith and Patience",
+      "description": "Faith and Patience — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-your-loveworld",
+      "topicIds": [
+        "t-faith"
+      ],
+      "publishedAt": "2026-03-14",
+      "durationSec": 3418,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-014",
+      "title": "Victorious Faith",
+      "description": "Victorious Faith — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-communion",
+      "topicIds": [
+        "t-faith"
+      ],
+      "publishedAt": "2026-05-15",
+      "durationSec": 3555,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-015",
+      "title": "Healing Is Yours",
+      "description": "Healing Is Yours — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-healing-streams",
+      "topicIds": [
+        "t-healing"
+      ],
+      "publishedAt": "2026-01-16",
+      "durationSec": 1592,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-016",
+      "title": "The Healing Anointing",
+      "description": "The Healing Anointing — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-your-loveworld",
+      "topicIds": [
+        "t-healing"
+      ],
+      "publishedAt": "2026-03-17",
+      "durationSec": 1729,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-017",
+      "title": "Walk in Divine Health",
+      "description": "Walk in Divine Health — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-communion",
+      "topicIds": [
+        "t-healing"
+      ],
+      "publishedAt": "2026-05-18",
+      "durationSec": 1866,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-018",
+      "title": "Miracles Today",
+      "description": "Miracles Today — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-healing-streams",
+      "topicIds": [
+        "t-healing"
+      ],
+      "publishedAt": "2026-07-19",
+      "durationSec": 2003,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-019",
+      "title": "Healing Words",
+      "description": "Healing Words — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-your-loveworld",
+      "topicIds": [
+        "t-healing"
+      ],
+      "publishedAt": "2026-01-20",
+      "durationSec": 2140,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-020",
+      "title": "Wholeness for Families",
+      "description": "Wholeness for Families — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-communion",
+      "topicIds": [
+        "t-healing"
+      ],
+      "publishedAt": "2026-03-21",
+      "durationSec": 2277,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-021",
+      "title": "The Prayer Life",
+      "description": "The Prayer Life — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-healing-streams",
+      "topicIds": [
+        "t-prayer"
+      ],
+      "publishedAt": "2026-07-22",
+      "durationSec": 2414,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-022",
+      "title": "Praying in the Spirit",
+      "description": "Praying in the Spirit — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-your-loveworld",
+      "topicIds": [
+        "t-prayer"
+      ],
+      "publishedAt": "2026-01-23",
+      "durationSec": 2551,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-023",
+      "title": "Night of Prayer",
+      "description": "Night of Prayer — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-communion",
+      "topicIds": [
+        "t-prayer"
+      ],
+      "publishedAt": "2026-03-24",
+      "durationSec": 2688,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-024",
+      "title": "Prevailing Prayer",
+      "description": "Prevailing Prayer — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-healing-streams",
+      "topicIds": [
+        "t-prayer"
+      ],
+      "publishedAt": "2026-05-25",
+      "durationSec": 2825,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-025",
+      "title": "Thanksgiving and Prayer",
+      "description": "Thanksgiving and Prayer — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-your-loveworld",
+      "topicIds": [
+        "t-prayer"
+      ],
+      "publishedAt": "2026-07-26",
+      "durationSec": 2962,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-026",
+      "title": "Prayer for Nations",
+      "description": "Prayer for Nations — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-communion",
+      "topicIds": [
+        "t-prayer"
+      ],
+      "publishedAt": "2026-01-27",
+      "durationSec": 3099,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-027",
+      "title": "Led by the Spirit",
+      "description": "Led by the Spirit — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-healing-streams",
+      "topicIds": [
+        "t-spirit"
+      ],
+      "publishedAt": "2026-05-01",
+      "durationSec": 3236,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-028",
+      "title": "The Spirit of Wisdom",
+      "description": "The Spirit of Wisdom — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-your-loveworld",
+      "topicIds": [
+        "t-spirit"
+      ],
+      "publishedAt": "2026-07-02",
+      "durationSec": 3373,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-029",
+      "title": "Fellowship of the Spirit",
+      "description": "Fellowship of the Spirit — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-communion",
+      "topicIds": [
+        "t-spirit"
+      ],
+      "publishedAt": "2026-01-03",
+      "durationSec": 3510,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-030",
+      "title": "Gifts of the Spirit",
+      "description": "Gifts of the Spirit — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-healing-streams",
+      "topicIds": [
+        "t-spirit"
+      ],
+      "publishedAt": "2026-03-04",
+      "durationSec": 1547,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-031",
+      "title": "The Anointing",
+      "description": "The Anointing — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-your-loveworld",
+      "topicIds": [
+        "t-spirit"
+      ],
+      "publishedAt": "2026-05-05",
+      "durationSec": 1684,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-032",
+      "title": "Rivers of Living Water",
+      "description": "Rivers of Living Water — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-communion",
+      "topicIds": [
+        "t-spirit"
+      ],
+      "publishedAt": "2026-07-06",
+      "durationSec": 1821,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-033",
+      "title": "The Excellent Life",
+      "description": "The Excellent Life — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-healing-streams",
+      "topicIds": [
+        "t-living"
+      ],
+      "publishedAt": "2026-03-07",
+      "durationSec": 1958,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-034",
+      "title": "Walking in Love",
+      "description": "Walking in Love — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-your-loveworld",
+      "topicIds": [
+        "t-living"
+      ],
+      "publishedAt": "2026-05-08",
+      "durationSec": 2095,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-035",
+      "title": "Integrity and Grace",
+      "description": "Integrity and Grace — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-communion",
+      "topicIds": [
+        "t-living"
+      ],
+      "publishedAt": "2026-07-09",
+      "durationSec": 2232,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-036",
+      "title": "Daily Devotion",
+      "description": "Daily Devotion — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-healing-streams",
+      "topicIds": [
+        "t-living"
+      ],
+      "publishedAt": "2026-01-10",
+      "durationSec": 2369,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-037",
+      "title": "Character of Christ",
+      "description": "Character of Christ — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-your-loveworld",
+      "topicIds": [
+        "t-living"
+      ],
+      "publishedAt": "2026-03-11",
+      "durationSec": 2506,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-038",
+      "title": "Wisdom for Living",
+      "description": "Wisdom for Living — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-communion",
+      "topicIds": [
+        "t-living"
+      ],
+      "publishedAt": "2026-05-12",
+      "durationSec": 2643,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-039",
+      "title": "Godly Homes",
+      "description": "Godly Homes — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-healing-streams",
+      "topicIds": [
+        "t-family"
+      ],
+      "publishedAt": "2026-01-13",
+      "durationSec": 2780,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-040",
+      "title": "Raising Champions",
+      "description": "Raising Champions — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-your-loveworld",
+      "topicIds": [
+        "t-family"
+      ],
+      "publishedAt": "2026-03-14",
+      "durationSec": 2917,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-041",
+      "title": "Marriage and Grace",
+      "description": "Marriage and Grace — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-communion",
+      "topicIds": [
+        "t-family"
+      ],
+      "publishedAt": "2026-05-15",
+      "durationSec": 3054,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-042",
+      "title": "Blessing Your Children",
+      "description": "Blessing Your Children — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-healing-streams",
+      "topicIds": [
+        "t-family"
+      ],
+      "publishedAt": "2026-07-16",
+      "durationSec": 3191,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-043",
+      "title": "Family Altar",
+      "description": "Family Altar — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-your-loveworld",
+      "topicIds": [
+        "t-family"
+      ],
+      "publishedAt": "2026-01-17",
+      "durationSec": 3328,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-044",
+      "title": "Peace at Home",
+      "description": "Peace at Home — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-communion",
+      "topicIds": [
+        "t-family"
+      ],
+      "publishedAt": "2026-03-18",
+      "durationSec": 3465,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-045",
+      "title": "Your Divine Assignment",
+      "description": "Your Divine Assignment — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-healing-streams",
+      "topicIds": [
+        "t-purpose"
+      ],
+      "publishedAt": "2026-07-19",
+      "durationSec": 1502,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-046",
+      "title": "Called and Chosen",
+      "description": "Called and Chosen — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-your-loveworld",
+      "topicIds": [
+        "t-purpose"
+      ],
+      "publishedAt": "2026-01-20",
+      "durationSec": 1639,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-047",
+      "title": "Finish Your Course",
+      "description": "Finish Your Course — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-communion",
+      "topicIds": [
+        "t-purpose"
+      ],
+      "publishedAt": "2026-03-21",
+      "durationSec": 1776,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-048",
+      "title": "Vision and Direction",
+      "description": "Vision and Direction — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-healing-streams",
+      "topicIds": [
+        "t-purpose"
+      ],
+      "publishedAt": "2026-05-22",
+      "durationSec": 1913,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-049",
+      "title": "Excellence in Work",
+      "description": "Excellence in Work — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-your-loveworld",
+      "topicIds": [
+        "t-purpose"
+      ],
+      "publishedAt": "2026-07-23",
+      "durationSec": 2050,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-050",
+      "title": "Serving with Joy",
+      "description": "Serving with Joy — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-communion",
+      "topicIds": [
+        "t-purpose"
+      ],
+      "publishedAt": "2026-01-24",
+      "durationSec": 2187,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-051",
+      "title": "Win Your World",
+      "description": "Win Your World — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-healing-streams",
+      "topicIds": [
+        "t-evangelism"
+      ],
+      "publishedAt": "2026-05-25",
+      "durationSec": 2324,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-052",
+      "title": "The Soul Winner",
+      "description": "The Soul Winner — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-your-loveworld",
+      "topicIds": [
+        "t-evangelism"
+      ],
+      "publishedAt": "2026-07-26",
+      "durationSec": 2461,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-053",
+      "title": "Love Takes Action",
+      "description": "Love Takes Action — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-communion",
+      "topicIds": [
+        "t-evangelism"
+      ],
+      "publishedAt": "2026-01-27",
+      "durationSec": 2598,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-054",
+      "title": "Preach the Gospel",
+      "description": "Preach the Gospel — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-healing-streams",
+      "topicIds": [
+        "t-evangelism"
+      ],
+      "publishedAt": "2026-03-01",
+      "durationSec": 2735,
+      "artwork": "16:9",
+      "status": "published"
+    },
+    {
+      "id": "m-055",
+      "title": "Compassion in Action",
+      "description": "Compassion in Action — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-your-loveworld",
+      "topicIds": [
+        "t-evangelism"
+      ],
+      "publishedAt": "2026-05-02",
+      "durationSec": 2872,
+      "artwork": "16:9",
+      "status": "scheduled"
+    },
+    {
+      "id": "m-056",
+      "title": "Harvest Time",
+      "description": "Harvest Time — teaching with Pastor Chris Oyakhilome.",
+      "speaker": "Pastor Chris Oyakhilome",
+      "programId": "p-communion",
+      "topicIds": [
+        "t-evangelism"
+      ],
+      "publishedAt": "2026-07-03",
+      "durationSec": 3009,
+      "artwork": "16:9",
+      "status": "draft"
+    }
   ],
   "artists": [
-    { "id": "a-001", "name": "LoveWorld Worship", "bio": "Collective worship team.", "artwork": "1:1" },
-    { "id": "a-002", "name": "Violin Praise", "bio": "Instrumental praise.", "artwork": "1:1" },
-    { "id": "a-003", "name": "Grace Choir", "bio": "Choir ensemble.", "artwork": "1:1" }
+    {
+      "id": "a-001",
+      "name": "LoveWorld Worship",
+      "bio": "Collective worship team.",
+      "artwork": "1:1"
+    },
+    {
+      "id": "a-002",
+      "name": "Violin Praise",
+      "bio": "Instrumental praise.",
+      "artwork": "1:1"
+    },
+    {
+      "id": "a-003",
+      "name": "Grace Choir",
+      "bio": "Choir ensemble.",
+      "artwork": "1:1"
+    },
+    {
+      "id": "a-004",
+      "name": "Eternal Sound",
+      "bio": "Eternal Sound — LoveWorld music ministry.",
+      "artwork": "1:1"
+    },
+    {
+      "id": "a-005",
+      "name": "Psalms Collective",
+      "bio": "Psalms Collective — LoveWorld music ministry.",
+      "artwork": "1:1"
+    },
+    {
+      "id": "a-006",
+      "name": "Hosanna Voices",
+      "bio": "Hosanna Voices — LoveWorld music ministry.",
+      "artwork": "1:1"
+    },
+    {
+      "id": "a-007",
+      "name": "Covenant Music",
+      "bio": "Covenant Music — LoveWorld music ministry.",
+      "artwork": "1:1"
+    },
+    {
+      "id": "a-008",
+      "name": "New Wine Band",
+      "bio": "New Wine Band — LoveWorld music ministry.",
+      "artwork": "1:1"
+    },
+    {
+      "id": "a-009",
+      "name": "Shalom Singers",
+      "bio": "Shalom Singers — LoveWorld music ministry.",
+      "artwork": "1:1"
+    },
+    {
+      "id": "a-010",
+      "name": "Kingdom Anthem",
+      "bio": "Kingdom Anthem — LoveWorld music ministry.",
+      "artwork": "1:1"
+    }
   ],
   "albums": [
-    { "id": "al-001", "artistId": "a-001", "title": "Morning Worship", "artwork": "1:1", "releaseDate": "2026-06-01" },
-    { "id": "al-002", "artistId": "a-002", "title": "Evening Praise", "artwork": "1:1", "releaseDate": "2026-05-12" }
+    {
+      "id": "al-001",
+      "artistId": "a-001",
+      "title": "Morning Worship",
+      "artwork": "1:1",
+      "releaseDate": "2026-06-01"
+    },
+    {
+      "id": "al-002",
+      "artistId": "a-002",
+      "title": "Evening Praise",
+      "artwork": "1:1",
+      "releaseDate": "2026-05-12"
+    },
+    {
+      "id": "al-003",
+      "artistId": "a-001",
+      "title": "Praise Rising",
+      "artwork": "1:1",
+      "releaseDate": "2026-03-15"
+    },
+    {
+      "id": "al-004",
+      "artistId": "a-002",
+      "title": "Songs of Devotion",
+      "artwork": "1:1",
+      "releaseDate": "2026-04-15"
+    },
+    {
+      "id": "al-005",
+      "artistId": "a-003",
+      "title": "Joyful Noise",
+      "artwork": "1:1",
+      "releaseDate": "2026-05-15"
+    },
+    {
+      "id": "al-006",
+      "artistId": "a-004",
+      "title": "Hymns Renewed",
+      "artwork": "1:1",
+      "releaseDate": "2026-06-15"
+    },
+    {
+      "id": "al-007",
+      "artistId": "a-005",
+      "title": "Overflow",
+      "artwork": "1:1",
+      "releaseDate": "2026-07-15"
+    },
+    {
+      "id": "al-008",
+      "artistId": "a-006",
+      "title": "Glory Sound",
+      "artwork": "1:1",
+      "releaseDate": "2026-08-15"
+    },
+    {
+      "id": "al-009",
+      "artistId": "a-007",
+      "title": "Testimony",
+      "artwork": "1:1",
+      "releaseDate": "2026-01-15"
+    },
+    {
+      "id": "al-010",
+      "artistId": "a-008",
+      "title": "Selah Moments",
+      "artwork": "1:1",
+      "releaseDate": "2026-02-15"
+    }
   ],
   "songs": [
-    { "id": "s-001", "albumId": "al-001", "artistId": "a-001", "title": "We Lift Your Name", "durationSec": 245 },
-    { "id": "s-002", "albumId": "al-001", "artistId": "a-001", "title": "Holy Ground", "durationSec": 268 },
-    { "id": "s-003", "albumId": "al-002", "artistId": "a-002", "title": "Strings of Joy", "durationSec": 192 },
-    { "id": "s-004", "albumId": "al-002", "artistId": "a-002", "title": "Evening Psalm", "durationSec": 221 }
+    {
+      "id": "s-001",
+      "albumId": "al-001",
+      "artistId": "a-001",
+      "title": "We Lift Your Name",
+      "durationSec": 245
+    },
+    {
+      "id": "s-002",
+      "albumId": "al-001",
+      "artistId": "a-001",
+      "title": "Holy Ground",
+      "durationSec": 268
+    },
+    {
+      "id": "s-003",
+      "albumId": "al-002",
+      "artistId": "a-002",
+      "title": "Strings of Joy",
+      "durationSec": 192
+    },
+    {
+      "id": "s-004",
+      "albumId": "al-002",
+      "artistId": "a-002",
+      "title": "Evening Psalm",
+      "durationSec": 221
+    },
+    {
+      "id": "s-005",
+      "albumId": "al-001",
+      "artistId": "a-001",
+      "title": "Rejoice Rejoice",
+      "durationSec": 208
+    },
+    {
+      "id": "s-006",
+      "albumId": "al-002",
+      "artistId": "a-002",
+      "title": "Amen Triumph",
+      "durationSec": 261
+    },
+    {
+      "id": "s-007",
+      "albumId": "al-003",
+      "artistId": "a-001",
+      "title": "Worthy Hallelujah",
+      "durationSec": 174
+    },
+    {
+      "id": "s-008",
+      "albumId": "al-003",
+      "artistId": "a-001",
+      "title": "Grace Grace",
+      "durationSec": 227
+    },
+    {
+      "id": "s-009",
+      "albumId": "al-003",
+      "artistId": "a-001",
+      "title": "Emmanuel Rejoice",
+      "durationSec": 280
+    },
+    {
+      "id": "s-010",
+      "albumId": "al-004",
+      "artistId": "a-002",
+      "title": "Shout Triumph",
+      "durationSec": 193
+    },
+    {
+      "id": "s-011",
+      "albumId": "al-004",
+      "artistId": "a-002",
+      "title": "Hallelujah Hallelujah",
+      "durationSec": 246
+    },
+    {
+      "id": "s-012",
+      "albumId": "al-004",
+      "artistId": "a-002",
+      "title": "Holy Grace",
+      "durationSec": 299
+    },
+    {
+      "id": "s-013",
+      "albumId": "al-005",
+      "artistId": "a-003",
+      "title": "Glory Rejoice",
+      "durationSec": 212
+    },
+    {
+      "id": "s-014",
+      "albumId": "al-005",
+      "artistId": "a-003",
+      "title": "Triumph Triumph",
+      "durationSec": 265
+    },
+    {
+      "id": "s-015",
+      "albumId": "al-005",
+      "artistId": "a-003",
+      "title": "Mercy Hallelujah",
+      "durationSec": 178
+    },
+    {
+      "id": "s-016",
+      "albumId": "al-006",
+      "artistId": "a-004",
+      "title": "Jubilee Grace",
+      "durationSec": 231
+    },
+    {
+      "id": "s-017",
+      "albumId": "al-006",
+      "artistId": "a-004",
+      "title": "Rejoice Rejoice",
+      "durationSec": 284
+    },
+    {
+      "id": "s-018",
+      "albumId": "al-006",
+      "artistId": "a-004",
+      "title": "Amen Triumph",
+      "durationSec": 197
+    },
+    {
+      "id": "s-019",
+      "albumId": "al-007",
+      "artistId": "a-005",
+      "title": "Worthy Hallelujah",
+      "durationSec": 250
+    },
+    {
+      "id": "s-020",
+      "albumId": "al-007",
+      "artistId": "a-005",
+      "title": "Grace Grace",
+      "durationSec": 303
+    },
+    {
+      "id": "s-021",
+      "albumId": "al-007",
+      "artistId": "a-005",
+      "title": "Emmanuel Rejoice",
+      "durationSec": 216
+    },
+    {
+      "id": "s-022",
+      "albumId": "al-008",
+      "artistId": "a-006",
+      "title": "Shout Triumph",
+      "durationSec": 269
+    },
+    {
+      "id": "s-023",
+      "albumId": "al-008",
+      "artistId": "a-006",
+      "title": "Hallelujah Hallelujah",
+      "durationSec": 182
+    },
+    {
+      "id": "s-024",
+      "albumId": "al-008",
+      "artistId": "a-006",
+      "title": "Holy Grace",
+      "durationSec": 235
+    },
+    {
+      "id": "s-025",
+      "albumId": "al-009",
+      "artistId": "a-007",
+      "title": "Glory Rejoice",
+      "durationSec": 288
+    },
+    {
+      "id": "s-026",
+      "albumId": "al-009",
+      "artistId": "a-007",
+      "title": "Triumph Triumph",
+      "durationSec": 201
+    },
+    {
+      "id": "s-027",
+      "albumId": "al-009",
+      "artistId": "a-007",
+      "title": "Mercy Hallelujah",
+      "durationSec": 254
+    },
+    {
+      "id": "s-028",
+      "albumId": "al-010",
+      "artistId": "a-008",
+      "title": "Jubilee Grace",
+      "durationSec": 307
+    },
+    {
+      "id": "s-029",
+      "albumId": "al-010",
+      "artistId": "a-008",
+      "title": "Rejoice Rejoice",
+      "durationSec": 220
+    },
+    {
+      "id": "s-030",
+      "albumId": "al-010",
+      "artistId": "a-008",
+      "title": "Amen Triumph",
+      "durationSec": 273
+    }
   ],
   "playlists": [
-    { "id": "pl-001", "title": "LoveWorld Worship", "type": "curated", "songIds": ["s-001", "s-002"], "artwork": "1:1" },
-    { "id": "pl-002", "title": "Morning Worship", "type": "curated", "songIds": ["s-001", "s-003"], "artwork": "1:1" },
-    { "id": "pl-003", "title": "New Releases", "type": "curated", "songIds": ["s-002", "s-004"], "artwork": "1:1" }
+    {
+      "id": "pl-001",
+      "title": "LoveWorld Worship",
+      "type": "curated",
+      "songIds": [
+        "s-001",
+        "s-002"
+      ],
+      "artwork": "1:1"
+    },
+    {
+      "id": "pl-002",
+      "title": "Morning Worship",
+      "type": "curated",
+      "songIds": [
+        "s-001",
+        "s-003"
+      ],
+      "artwork": "1:1"
+    },
+    {
+      "id": "pl-003",
+      "title": "New Releases",
+      "type": "curated",
+      "songIds": [
+        "s-002",
+        "s-004"
+      ],
+      "artwork": "1:1"
+    },
+    {
+      "id": "pl-004",
+      "title": "Praise",
+      "type": "curated",
+      "songIds": [
+        "s-005",
+        "s-006",
+        "s-007"
+      ],
+      "artwork": "1:1"
+    },
+    {
+      "id": "pl-005",
+      "title": "Evening Worship",
+      "type": "curated",
+      "songIds": [
+        "s-008",
+        "s-009",
+        "s-010"
+      ],
+      "artwork": "1:1"
+    },
+    {
+      "id": "pl-006",
+      "title": "Pastor Chris Recommended",
+      "type": "curated",
+      "songIds": [
+        "s-001",
+        "s-005",
+        "s-009"
+      ],
+      "artwork": "1:1"
+    }
   ],
   "live": [
-    { "id": "l-001", "title": "Pastor Chris Live — Friday", "status": "scheduled", "scheduledAt": "2026-09-26T19:00:00Z", "programId": "p-your-loveworld", "artwork": "16:9" },
-    { "id": "l-002", "title": "Healing Streams Testimony Hour", "status": "ended", "scheduledAt": "2026-09-15T17:00:00Z", "programId": "p-healing-streams", "artwork": "16:9" }
+    {
+      "id": "l-001",
+      "title": "Pastor Chris Live — Friday",
+      "status": "scheduled",
+      "scheduledAt": "2026-09-26T19:00:00Z",
+      "programId": "p-your-loveworld",
+      "artwork": "16:9"
+    },
+    {
+      "id": "l-002",
+      "title": "Healing Streams Testimony Hour",
+      "status": "ended",
+      "scheduledAt": "2026-09-15T17:00:00Z",
+      "programId": "p-healing-streams",
+      "artwork": "16:9"
+    },
+    {
+      "id": "l-003",
+      "title": "Global Communion Service",
+      "status": "scheduled",
+      "scheduledAt": "2026-10-05T18:00:00Z",
+      "programId": "p-communion",
+      "artwork": "16:9"
+    }
   ]
 }
