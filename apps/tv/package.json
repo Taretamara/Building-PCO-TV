@@ -6,6 +6,7 @@
     "build": "tsc --noEmit -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "echo 'tv lint placeholder (Phase 1: eslint + focus engine)'",
+    "verify": "node scripts/verify-shell.mjs",
     "dev": "echo 'Phase 1: run react-native-tvos (Android TV / Fire TV). See docs/ADRs/ADR-002-frontend.md'"
   }
 }

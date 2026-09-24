@@ -1,0 +1,28 @@
+{
+  "tabs": [
+    { "id": "home", "title": "Home", "route": "/home", "focusZone": "nav:home" },
+    { "id": "messages", "title": "Messages", "route": "/messages", "focusZone": "nav:messages" },
+    { "id": "music", "title": "Music", "route": "/music", "focusZone": "nav:music" },
+    { "id": "live", "title": "Live", "route": "/live", "focusZone": "nav:live" },
+    { "id": "programs", "title": "Programs", "route": "/programs", "focusZone": "nav:programs" },
+    { "id": "favorites", "title": "Favorites", "route": "/favorites", "focusZone": "nav:favorites" },
+    { "id": "search", "title": "Search", "route": "/search", "focusZone": "nav:search" }
+  ],
+  "details": [
+    { "id": "message", "pattern": "/message/:id", "scheme": "pco://message/:id", "parentTab": "messages" },
+    { "id": "program", "pattern": "/program/:id", "scheme": "pco://program/:id", "parentTab": "programs" },
+    { "id": "artist", "pattern": "/artist/:id", "scheme": "pco://artist/:id", "parentTab": "music" },
+    { "id": "album", "pattern": "/album/:id", "scheme": "pco://album/:id", "parentTab": "music" },
+    { "id": "playlist", "pattern": "/playlist/:id", "scheme": "pco://playlist/:id", "parentTab": "music" },
+    { "id": "live", "pattern": "/live/:id", "scheme": "pco://live/:id", "parentTab": "live" }
+  ],
+  "homeRails": [
+    { "key": "continue-watching", "title": "Continue Watching", "sourceTab": "home" },
+    { "key": "live-now", "title": "Live Now", "sourceTab": "live" },
+    { "key": "pastor-chris", "title": "Pastor Chris", "sourceTab": "messages" },
+    { "key": "music", "title": "LoveWorld Music", "sourceTab": "music" },
+    { "key": "recommended", "title": "Recommended for You", "sourceTab": "home" },
+    { "key": "recently-added", "title": "Recently Added", "sourceTab": "messages" },
+    { "key": "popular", "title": "Popular", "sourceTab": "home" }
+  ]
+}

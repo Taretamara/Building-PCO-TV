@@ -1,5 +1,5 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": { "noEmit": true, "jsx": "react-native" },
-  "include": ["package.json"]
+  "include": ["src", "shell/routes.json", "package.json"]
 }
