@@ -15,6 +15,7 @@
     "lint": "echo 'api lint ok (Phase 2: supabase edge functions / nestjs)'",
     "dev": "echo 'Phase 2: supabase start'",
     "proof": "tsx scripts/e2e-proof.ts",
-    "proof:admin": "tsx scripts/e2e-admin-proof.ts"
+    "proof:admin": "tsx scripts/e2e-admin-proof.ts",
+    "proof:viewer": "tsx scripts/e2e-viewer-proof.ts"
   }
 }
