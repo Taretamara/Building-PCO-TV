@@ -28,25 +28,26 @@ This plan goes from **design system → architecture → build phases → launch
 
 ## 2. Recommended Stack (MVP — locked unless ADR overrides)
 
-| Layer | Choice | Why for PCO TV | If not this |
+| Layer | Choice (primary) | Free $0 route for MVP | Trade-off / when to upgrade |
 |---|---|---|---|
-| TV app | React Native for TV (`react-native-tvos`) + TypeScript | One codebase for Android TV / Fire TV / tvOS, mature D-pad focus handling | Flutter (weak TV focus) or native Kotlin/Swift (2x cost) |
-| Admin web | Next.js + TypeScript + Tailwind | Fast CRUD for Content/Super Admin, same TS types as TV | Remix — fine but smaller hiring pool |
-| Monorepo | pnpm + Turborepo, ESLint + Prettier, shared `packages/*` | Shared Zod schemas, tokens, api-client across tv/admin/api | npm workspaces alone — slower builds |
-| Backend + DB | Supabase (Postgres + RLS + Storage + Edge Functions) | Auth + roles + Postgres FTS + storage in one; fastest to RBAC (§36) | NestJS + Postgres — use when team >3 or complex billing |
-| Auth | Supabase Auth (email + QR-code TV sign-in) | Guest browse → upgrade prompt (§18), no password typing on remote | Clerk/Auth0 — use if social logins needed day one |
-| CMS | Sanity (structured content) | Content Admins publish messages/music/programs/topics/artwork without code (§25, §36) | Strapi/Directus — self-host if data-residency required |
-| Video VOD | Mux (upload → HLS → CDN) | No transcoding to build, thumbnails + captions + renditions out of box | Cloudflare Stream — cheaper at scale; AWS Elemental — max control, max ops |
-| Live | Mux Live (same vendor as VOD) | One vendor for Live Now/Upcoming/Recent (§13), HLS fallback rails | AWS IVS — lower latency chat (deferred); Cloudflare — if already on CF |
-| Audio | Mux audio / CDN MP3-AAC via Supabase Storage + CDN | Reuse video pipeline, background listening (§12) needs no separate server | Dedicated audio host only if podcast-scale analytics needed |
-| Search | Postgres full-text (MVP) → Typesense later | Unified grouped results (§16) without new service | Algolia — costly; add only after library >10k items |
-| Recommendations | SQL rules (same series → same topic → history → recent) | Implements Watch Next §6 without ML ops | ML (SageMaker/Vertex) — post-MVP only |
-| Notifications | OneSignal + FCM | Live-now / new-episode / new-music prefs (§15) on TV + email | Firebase-only if Android-TV-only |
-| Analytics + crash | PostHog + Sentry | Proves §32 success (find Pastor Chris/music/live/return/come-back) + TV crash traces | Mixpanel + Crashlytics — equivalent |
-| Storage/CDN | Supabase Storage + Cloudflare CDN (artwork 3 sizes) | Card/hero/background variants, image prefetch for 60fps rails | S3 + CloudFront — if AWS-native team |
-| CI/CD | GitHub Actions → Play Internal track / TestFlight | Lint/typecheck/test/build + staging/prod envs, store submission | EAS — only if Expo is adopted (not recommended for TV) |
-| State/data-fetch (TV) | TanStack Query + Zustand + Zod | Server cache (home/rails), local player/focus state, shared schemas | Redux Toolkit — heavier than needed |
+| TV app | React Native for TV (`react-native-tvos`) + TypeScript | Same — already free / OSS | None. Stay on this. |
+| Admin web | Next.js + TypeScript + Tailwind | Same — free / OSS. Host on Vercel Hobby or Cloudflare Pages (free) | Upgrade to Vercel Pro when team seats/bandwidth exceed hobby limits. |
+| Monorepo | pnpm + Turborepo, ESLint + Prettier | Same — free / OSS | None. |
+| Backend + DB | Supabase (Postgres + RLS + Storage + Edge Functions) | Same — Supabase Free (500MB DB, 1GB storage, 50k MAU). Alt $0: Neon Free (Postgres) + Render Free (Node API) | Upgrade to Supabase Pro ($25/mo) when DB/storage/auth limits hit or you need daily backups. |
+| Auth | Supabase Auth (email + QR-code TV sign-in) | Same — free within Supabase Free MAU limits | Upgrade to Clerk/Auth0 paid only if you need enterprise SSO/social on day one. |
+| CMS | Sanity (structured content) | Sanity Free (3 seats, generous API) for MVP. Alt $0: Strapi self-hosted on Render Free / Directus on Railway Trial | Upgrade to Sanity Growth when seats/API/bandwidth exceed free or you need roles at scale. Self-host Strapi if you outgrow seat pricing entirely. |
+| Video VOD | Mux (upload → HLS → CDN) | $0 route: ffmpeg (OSS) → HLS/MP4 → Supabase Storage Free (1GB) + Cloudflare R2 Free (10GB) + Cloudflare CDN Free. Or YouTube Unlisted embeds (free, fastest) | Free route = you own transcoding + thumbnails/captions + no adaptive-bitrate polish. Upgrade to Mux / Cloudflare Stream ($5–20+/mo) before public launch for adaptive HLS, thumbnails, captions. |
+| Live | Mux Live (same vendor as VOD) | $0 route: YouTube Live embed (free unlimited) or Owncast (OSS self-host on Render Free) fronted by Live Now/Upcoming/Recent states | YouTube = free + reliable but YouTube branding + less control. Owncast = full control but you manage uptime. Upgrade to Mux Live / AWS IVS when you need branded low-latency live without YouTube. |
+| Audio | Mux audio / CDN MP3-AAC via Supabase Storage + CDN | Same — MP3/AAC in Supabase Storage Free + R2 Free + CDN (no Mux needed for MVP) | Upgrade to Mux/Stream audio only if you need audio analytics at scale. |
+| Search | Postgres full-text (MVP) → Typesense later | Same — already free (Postgres FTS). Typesense Cloud free trial / self-host free on Render | Upgrade to Typesense Cloud / Algolia only after library >10k items or typo-tolerance needed. |
+| Recommendations | SQL rules (same series → same topic → history → recent) | Same — free (SQL, no service) | ML services (paid) post-MVP only. |
+| Notifications | OneSignal + FCM | Same — OneSignal Free (up to 10k subscribers), FCM free unlimited | Upgrade OneSignal to Growth when subscriber/push volume exceeds free. |
+| Analytics + crash | PostHog + Sentry | Same — PostHog Cloud Free (1M events/mo), Sentry Free (5k errors/mo) | Upgrade when event/error volume or retention needs exceed free tiers. |
+| Storage/CDN | Supabase Storage + Cloudflare CDN (artwork 3 sizes) | Same — Supabase 1GB + R2 10GB + Cloudflare CDN Free | Upgrade to R2 paid / S3 + CloudFront when artwork/video exceeds free GB/bandwidth. |
+| CI/CD | GitHub Actions → Play Internal track / TestFlight | Same — GitHub Actions Free (2,000 min/mo private, unlimited public) | Upgrade only if build minutes exceed free (add self-hosted runner — free). |
+| State/data-fetch (TV) | TanStack Query + Zustand + Zod | Same — free / OSS | None. |
 
+> $0 MVP path: Supabase Free + Sanity Free + Vercel Hobby/Cloudflare Pages + R2 Free + ffmpeg/YouTube + OneSignal Free + PostHog Free + Sentry Free + GitHub Actions Free = ~$0/mo until content volume and users grow. Then upgrade video (Mux/Stream) first, then Supabase/Sanity.
 > Rule: any deviation from this table needs a 1-page ADR in `docs/ADRs/`. Otherwise build to this table.
 
 ## 2. Architectural Decisions (decide in Phase 0, before building UI)
