@@ -16,3 +16,7 @@ export * from "./music";
 export * from "./live";
 export * from "./discovery";
 export * from "./playback";
+export * from "./recommendations";
+export * from "./sharing";
+export * from "./notifications";
+export * from "./hardening";
