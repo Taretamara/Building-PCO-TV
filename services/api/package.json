@@ -2,10 +2,18 @@
   "name": "@pco/api",
   "version": "0.0.0",
   "private": true,
+  "dependencies": {
+    "@pco/content-models": "workspace:*",
+    "@pco/ui-tv": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "^4.0.0"
+  },
   "scripts": {
     "build": "tsc --noEmit -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "echo 'api lint ok (Phase 2: supabase edge functions / nestjs)'",
-    "dev": "echo 'Phase 2: supabase start'"
+    "dev": "echo 'Phase 2: supabase start'",
+    "proof": "tsx scripts/e2e-proof.ts"
   }
 }
