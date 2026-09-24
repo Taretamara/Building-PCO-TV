@@ -20,3 +20,7 @@ export * from "./recommendations";
 export * from "./sharing";
 export * from "./notifications";
 export * from "./hardening";
+export * from "./perf";
+export * from "./i18n";
+export * from "./qa";
+export * from "./success";
