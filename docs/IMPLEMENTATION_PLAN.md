@@ -26,6 +26,29 @@ This plan goes from **design system → architecture → build phases → launch
 
 ---
 
+## 2. Recommended Stack (MVP — locked unless ADR overrides)
+
+| Layer | Choice | Why for PCO TV | If not this |
+|---|---|---|---|
+| TV app | React Native for TV (`react-native-tvos`) + TypeScript | One codebase for Android TV / Fire TV / tvOS, mature D-pad focus handling | Flutter (weak TV focus) or native Kotlin/Swift (2x cost) |
+| Admin web | Next.js + TypeScript + Tailwind | Fast CRUD for Content/Super Admin, same TS types as TV | Remix — fine but smaller hiring pool |
+| Monorepo | pnpm + Turborepo, ESLint + Prettier, shared `packages/*` | Shared Zod schemas, tokens, api-client across tv/admin/api | npm workspaces alone — slower builds |
+| Backend + DB | Supabase (Postgres + RLS + Storage + Edge Functions) | Auth + roles + Postgres FTS + storage in one; fastest to RBAC (§36) | NestJS + Postgres — use when team >3 or complex billing |
+| Auth | Supabase Auth (email + QR-code TV sign-in) | Guest browse → upgrade prompt (§18), no password typing on remote | Clerk/Auth0 — use if social logins needed day one |
+| CMS | Sanity (structured content) | Content Admins publish messages/music/programs/topics/artwork without code (§25, §36) | Strapi/Directus — self-host if data-residency required |
+| Video VOD | Mux (upload → HLS → CDN) | No transcoding to build, thumbnails + captions + renditions out of box | Cloudflare Stream — cheaper at scale; AWS Elemental — max control, max ops |
+| Live | Mux Live (same vendor as VOD) | One vendor for Live Now/Upcoming/Recent (§13), HLS fallback rails | AWS IVS — lower latency chat (deferred); Cloudflare — if already on CF |
+| Audio | Mux audio / CDN MP3-AAC via Supabase Storage + CDN | Reuse video pipeline, background listening (§12) needs no separate server | Dedicated audio host only if podcast-scale analytics needed |
+| Search | Postgres full-text (MVP) → Typesense later | Unified grouped results (§16) without new service | Algolia — costly; add only after library >10k items |
+| Recommendations | SQL rules (same series → same topic → history → recent) | Implements Watch Next §6 without ML ops | ML (SageMaker/Vertex) — post-MVP only |
+| Notifications | OneSignal + FCM | Live-now / new-episode / new-music prefs (§15) on TV + email | Firebase-only if Android-TV-only |
+| Analytics + crash | PostHog + Sentry | Proves §32 success (find Pastor Chris/music/live/return/come-back) + TV crash traces | Mixpanel + Crashlytics — equivalent |
+| Storage/CDN | Supabase Storage + Cloudflare CDN (artwork 3 sizes) | Card/hero/background variants, image prefetch for 60fps rails | S3 + CloudFront — if AWS-native team |
+| CI/CD | GitHub Actions → Play Internal track / TestFlight | Lint/typecheck/test/build + staging/prod envs, store submission | EAS — only if Expo is adopted (not recommended for TV) |
+| State/data-fetch (TV) | TanStack Query + Zustand + Zod | Server cache (home/rails), local player/focus state, shared schemas | Redux Toolkit — heavier than needed |
+
+> Rule: any deviation from this table needs a 1-page ADR in `docs/ADRs/`. Otherwise build to this table.
+
 ## 2. Architectural Decisions (decide in Phase 0, before building UI)
 
 ### 2.1 TV platforms — Recommendation: start narrow
