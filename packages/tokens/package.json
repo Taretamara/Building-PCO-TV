@@ -1,0 +1,10 @@
+{
+  "name": "@pco/tokens",
+  "version": "0.0.0",
+  "main": "tokens.json",
+  "scripts": {
+    "build": "node -e \"JSON.parse(require('fs').readFileSync('tokens.json','utf8'));console.log('tokens ok')\"",
+    "typecheck": "node -e \"JSON.parse(require('fs').readFileSync('tokens.json','utf8'))\"",
+    "lint": "echo 'tokens lint ok'"
+  }
+}

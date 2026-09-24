@@ -1,0 +1,51 @@
+{
+  "topics": [
+    { "id": "t-faith", "slug": "faith", "name": "Faith" },
+    { "id": "t-healing", "slug": "healing", "name": "Healing" },
+    { "id": "t-prayer", "slug": "prayer", "name": "Prayer" },
+    { "id": "t-spirit", "slug": "holy-spirit", "name": "Holy Spirit" },
+    { "id": "t-living", "slug": "christian-living", "name": "Christian Living" },
+    { "id": "t-family", "slug": "family", "name": "Family" },
+    { "id": "t-purpose", "slug": "purpose", "name": "Purpose" },
+    { "id": "t-evangelism", "slug": "evangelism", "name": "Evangelism" }
+  ],
+  "programs": [
+    { "id": "p-healing-streams", "slug": "healing-streams", "title": "Healing Streams", "description": "Healing services with Pastor Chris.", "artwork": "16:9 placeholder" },
+    { "id": "p-your-loveworld", "slug": "your-loveworld", "title": "Your Loveworld", "description": "Seasonal teaching series.", "artwork": "16:9 placeholder" },
+    { "id": "p-communion", "slug": "global-communion", "title": "Global Communion", "description": "Monthly communion service.", "artwork": "16:9 placeholder" }
+  ],
+  "messages": [
+    { "id": "m-001", "title": "Faith That Prevails", "description": "Prevailing faith for daily victory.", "speaker": "Pastor Chris Oyakhilome", "programId": "p-your-loveworld", "topicIds": ["t-faith", "t-living"], "publishedAt": "2026-09-01", "durationSec": 2520, "artwork": "16:9", "status": "published", "featuredRank": 1 },
+    { "id": "m-002", "title": "Healing Streams Recap", "description": "Highlights and testimonies.", "speaker": "Pastor Chris Oyakhilome", "programId": "p-healing-streams", "topicIds": ["t-healing", "t-faith"], "publishedAt": "2026-09-05", "durationSec": 3480, "artwork": "16:9", "status": "published", "featuredRank": 2 },
+    { "id": "m-003", "title": "Your Loveworld S12E1", "description": "Opening teaching of the season.", "speaker": "Pastor Chris Oyakhilome", "programId": "p-your-loveworld", "topicIds": ["t-spirit", "t-purpose"], "publishedAt": "2026-09-08", "durationSec": 2100, "artwork": "16:9", "status": "published" },
+    { "id": "m-004", "title": "Global Communion September", "description": "Communion word and blessings.", "speaker": "Pastor Chris Oyakhilome", "programId": "p-communion", "topicIds": ["t-faith", "t-family"], "publishedAt": "2026-09-07", "durationSec": 2820, "artwork": "16:9", "status": "published" },
+    { "id": "m-005", "title": "The Holy Spirit in You", "description": "Walking with the Spirit daily.", "speaker": "Pastor Chris Oyakhilome", "programId": "p-your-loveworld", "topicIds": ["t-spirit", "t-living"], "publishedAt": "2026-08-25", "durationSec": 3060, "artwork": "16:9", "status": "published" },
+    { "id": "m-006", "title": "Prayer That Works", "description": "Effective fervent prayer.", "speaker": "Pastor Chris Oyakhilome", "programId": "p-your-loveworld", "topicIds": ["t-prayer"], "publishedAt": "2026-08-18", "durationSec": 2340, "artwork": "16:9", "status": "published" },
+    { "id": "m-007", "title": "Purpose and Calling", "description": "Discovering divine purpose.", "speaker": "Pastor Chris Oyakhilome", "programId": "p-your-loveworld", "topicIds": ["t-purpose", "t-evangelism"], "publishedAt": "2026-08-10", "durationSec": 2640, "artwork": "16:9", "status": "published" },
+    { "id": "m-008", "title": "Family and Faith", "description": "Building a faith-filled home.", "speaker": "Pastor Chris Oyakhilome", "programId": "p-communion", "topicIds": ["t-family", "t-living"], "publishedAt": "2026-07-28", "durationSec": 1980, "artwork": "16:9", "status": "published" }
+  ],
+  "artists": [
+    { "id": "a-001", "name": "LoveWorld Worship", "bio": "Collective worship team.", "artwork": "1:1" },
+    { "id": "a-002", "name": "Violin Praise", "bio": "Instrumental praise.", "artwork": "1:1" },
+    { "id": "a-003", "name": "Grace Choir", "bio": "Choir ensemble.", "artwork": "1:1" }
+  ],
+  "albums": [
+    { "id": "al-001", "artistId": "a-001", "title": "Morning Worship", "artwork": "1:1", "releaseDate": "2026-06-01" },
+    { "id": "al-002", "artistId": "a-002", "title": "Evening Praise", "artwork": "1:1", "releaseDate": "2026-05-12" }
+  ],
+  "songs": [
+    { "id": "s-001", "albumId": "al-001", "artistId": "a-001", "title": "We Lift Your Name", "durationSec": 245 },
+    { "id": "s-002", "albumId": "al-001", "artistId": "a-001", "title": "Holy Ground", "durationSec": 268 },
+    { "id": "s-003", "albumId": "al-002", "artistId": "a-002", "title": "Strings of Joy", "durationSec": 192 },
+    { "id": "s-004", "albumId": "al-002", "artistId": "a-002", "title": "Evening Psalm", "durationSec": 221 }
+  ],
+  "playlists": [
+    { "id": "pl-001", "title": "LoveWorld Worship", "type": "curated", "songIds": ["s-001", "s-002"], "artwork": "1:1" },
+    { "id": "pl-002", "title": "Morning Worship", "type": "curated", "songIds": ["s-001", "s-003"], "artwork": "1:1" },
+    { "id": "pl-003", "title": "New Releases", "type": "curated", "songIds": ["s-002", "s-004"], "artwork": "1:1" }
+  ],
+  "live": [
+    { "id": "l-001", "title": "Pastor Chris Live — Friday", "status": "scheduled", "scheduledAt": "2026-09-26T19:00:00Z", "programId": "p-your-loveworld", "artwork": "16:9" },
+    { "id": "l-002", "title": "Healing Streams Testimony Hour", "status": "ended", "scheduledAt": "2026-09-15T17:00:00Z", "programId": "p-healing-streams", "artwork": "16:9" }
+  ]
+}

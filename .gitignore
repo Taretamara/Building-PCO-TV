@@ -1,3 +1,10 @@
 .DS_Store
 .Rhistory
 docs/.Rhistory
+node_modules/
+dist/
+.next/
+.turbo/
+*.local
+.env
+.env.local

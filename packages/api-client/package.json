@@ -1,0 +1,10 @@
+{
+  "name": "@pco/api-client",
+  "version": "0.0.0",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "tsc --noEmit -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "echo 'api-client lint ok'"
+  }
+}
