@@ -1,6 +1,6 @@
 # PCO TV — Implementation Plan
 
-**Source:** `docs/Untitled document.md` (PRD, 36 sections, V1 Concept + User Roles & Permissions)
+**Source:** `PRD.md` (36 sections, V1 Concept + User Roles & Permissions)
 **Repo state:** docs-only, `main` tracked to `origin/main`, no app code yet
 **Goal:** TV-first streaming destination for Pastor Chris messages, LoveWorld music, and LoveWorld programming. Principle: *Turn on. Find something meaningful. Watch.*
 
@@ -101,9 +101,9 @@ This plan goes from **design system → architecture → build phases → launch
   /workers         # transcoding webhooks, recommendations refresh, notifications
 /infra             # IaC (Terraform/Pulumi or SST), envs
 /docs
-  Untitled document.md (PRD — do not rewrite)
   IMPLEMENTATION_PLAN.md (this file)
   ADRs/
+PRD.md (product truth — do not rewrite)
 ```
 
 ### 2.5 Data model (minimum viable entities)
