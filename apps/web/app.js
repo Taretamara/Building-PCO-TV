@@ -55,12 +55,16 @@ function Home(s) {
   const msgs = DB.messages.filter((m) => m.status === "published");
   const recent = [...msgs].sort((a, b) => (a.publishedAt < b.publishedAt ? 1 : -1));
   const cwIds = Object.keys(store.progress);
-  const hero = el(`<div class="hero"><div class="kicker">WELCOME BACK · TEST DATA</div>
+  const premium = localStorage.getItem("pco.premium") === "1";
+  const hero = el(`<div class="hero"><div class="kicker">WELCOME BACK · TEST DATA ${premium ? "· ★ PREMIUM" : ""}</div>
     <h1>Turn on. Find something meaningful. Watch.</h1>
     <p>Pastor Chris messages, LoveWorld music, and live programming.</p>
-    <div class="rowbtns"><button class="btn primary" id="hero-play">▶ Continue Watching</button></div></div>`);
+    <div class="rowbtns"><button class="btn primary" id="hero-play">▶ Continue Watching</button>
+    ${premium ? "" : `<button class="btn" id="hero-sub">★ Subscribe — ₦1,500/mo (test)</button>`}</div></div>`);
   s.append(hero);
   hero.querySelector("#hero-play").onclick = () => cwIds.length && openDetail(cwIds[0]);
+  const subBtn = hero.querySelector("#hero-sub");
+  if (subBtn) subBtn.onclick = openSubscribe;
   if (cwIds.length) {
     s.append(rail("Continue Watching", "resume where you stopped",
       cwIds.map((id) => DB.messages.find((m) => m.id === id)).filter(Boolean).map((m) => card(m))));
@@ -216,14 +220,51 @@ function openLive(id) {
     <p style="color:var(--muted)">${l.status === "live" ? "On air now (test stream)." : l.status === "scheduled" ? "Scheduled — check back at airtime." : "Broadcast ended — replay coming soon."}</p>`);
 }
 
+const PREMIUM_PLAYLIST = "pl-006"; // "Pastor Chris Recommended" — subscriber-only demo gate
+const isPremium = () => localStorage.getItem("pco.premium") === "1";
+
 function openPlaylist(id) {
   const p = DB.playlists.find((x) => x.id === id);
+  if (id === PREMIUM_PLAYLIST && !isPremium()) {
+    openSheet(`🔒 ${p.title}`, `<p style="color:var(--muted)">This playlist is for subscribers (test mode — no real charge).</p>
+      <div class="rowbtns"><button class="btn primary" id="gate-sub">★ Subscribe — ₦1,500/mo (test)</button></div>`);
+    document.getElementById("gate-sub").onclick = openSubscribe;
+    return;
+  }
   const songs = p.songIds.map((sid) => DB.songs.find((x) => x.id === sid)).filter(Boolean);
   openSheet(`🎵 ${p.title}`, songs.map((x) => {
     const a = DB.artists.find((a) => a.id === x.artistId);
     return `<div class="chips"><button data-play="${x.id}">▶ ${x.title} — ${a?.name || ""}</button></div>`;
   }).join("") + `<div class="rowbtns"><button class="btn primary" id="play-all">Play All</button></div>`);
   document.getElementById("play-all").onclick = () => { queue = { ids: songs.map((x) => x.id), i: 0 }; playTrack(queue.ids[0]); };
+}
+
+/* Test-mode subscription via Paystack (key stays server-side in .env). */
+function openSubscribe() {
+  openSheet("★ Subscribe (test mode)", `
+    <div style="color:var(--muted)">PCO Monthly — ₦1,500/mo. Test checkout, no real charge.</div>
+    <div style="margin:14px 0"><input id="sub-email" class="searchbar" type="email" placeholder="you@example.com" aria-label="Email"></div>
+    <div class="rowbtns"><button class="btn primary" id="sub-go">Continue to Paystack test checkout</button></div>
+    <div id="sub-msg" style="color:var(--muted);margin-top:10px"></div>`);
+  document.getElementById("sub-go").onclick = async () => {
+    const email = document.getElementById("sub-email").value.trim();
+    const msg = document.getElementById("sub-msg");
+    msg.textContent = "Contacting test checkout…";
+    try {
+      const r = await fetch("/api/paystack/initialize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, amount: 150000 }),
+      });
+      const out = await r.json();
+      if (!r.ok) throw new Error(out.error || "checkout failed");
+      location.href = out.authorization_url;
+    } catch (e) {
+      msg.textContent = e.message === "payments not configured"
+        ? "Payments aren't configured on this server yet (PAYSTACK_SECRET_KEY missing in .env)."
+        : "Checkout failed: " + e.message;
+    }
+  };
 }
 
 function playTrack(id, isVideo) {

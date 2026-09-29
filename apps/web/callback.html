@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0E0C0A">
+<title>PCO TV — Payment result</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<main style="max-width:640px;margin:40px auto;padding:0 16px" id="out">
+  <p style="color:var(--muted)">Verifying test payment…</p>
+</main>
+<script>
+(async () => {
+  const ref = new URLSearchParams(location.search).get("reference");
+  const out = document.getElementById("out");
+  if (!ref) { out.innerHTML = "<div class='empty'>No payment reference returned.</div>"; return; }
+  try {
+    const r = await fetch("/api/paystack/verify?reference=" + encodeURIComponent(ref));
+    const v = await r.json();
+    if (v.status === "success") {
+      localStorage.setItem("pco.premium", "1");
+      out.innerHTML = "<div class='detail'><h2>★ You're subscribed (test mode)</h2>" +
+        "<p style='color:var(--muted)'>No real charge was made. Premium playlists are now unlocked on this device.</p>" +
+        "<div class='rowbtns'><a class='btn primary' href='index.html' style='text-decoration:none'>Back to PCO TV</a></div></div>";
+    } else {
+      out.innerHTML = "<div class='empty'>Payment not completed (" + v.status + "). <a href='index.html'>Back</a></div>";
+    }
+  } catch {
+    out.innerHTML = "<div class='empty'>Verification failed (offline?). <a href='index.html'>Back</a></div>";
+  }
+})();
+</script>
+</body>
+</html>
