@@ -41,6 +41,42 @@ let DB = null, tab = "Home", topicFilter = "", query = "";
 let queue = { ids: [], i: 0 };
 
 const el = (html) => { const t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstChild; };
+const TRAILER_SEC = 60;   // message hover preview length
+const MUSIC_PREVIEW_SEC = 8; // music hover preview length
+let MANIFEST = { artwork: {}, trailers: {}, previews: {} };
+
+function hashStr(s) { let h = 7; for (const c of s) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; }
+
+/* Generated cover art (offline, deterministic). A real file listed in
+   media/manifest.json always wins — see media/README.md. */
+function artwork(id, title, music) {
+  if (MANIFEST.artwork[id]) return `url("${MANIFEST.artwork[id]}")`;
+  const h = hashStr(id) % 360, h2 = (h + (music ? 70 : 45)) % 360;
+  const initial = (title || "?").trim()[0].toUpperCase();
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="480" height="270">` +
+    `<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">` +
+    `<stop offset="0" stop-color="hsl(${h},45%,32%)"/><stop offset="1" stop-color="hsl(${h2},50%,18%)"/></linearGradient></defs>` +
+    `<rect width="480" height="270" fill="url(#g)"/>` +
+    `<circle cx="400" cy="40" r="120" fill="hsl(${h2},60%,40%)" opacity="0.35"/>` +
+    `<circle cx="60" cy="240" r="90" fill="hsl(${h},60%,45%)" opacity="0.3"/>` +
+    `<text x="36" y="200" font-family="Arial,sans-serif" font-size="150" font-weight="bold" fill="rgba(255,255,255,0.85)">${initial}</text>` +
+    (music ? `<circle cx="420" cy="210" r="34" fill="rgba(0,0,0,0.45)"/><path d="M412 190 L440 210 L412 230 Z" fill="#F2C66B"/>` : ``) +
+    `</svg>`;
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+}
+
+/* Thumbs carry data-art; hydration sets the picture (keeps templates readable). */
+function hydrateArtwork(root) {
+  (root || document).querySelectorAll(".thumb[data-art]").forEach((t) => {
+    if (t.dataset.done) return;
+    const [id, title, m] = t.dataset.art.split("‖");
+    t.style.backgroundImage = artwork(id, title, m === "1");
+    t.classList.add("art");
+    t.dataset.done = "1";
+  });
+}
+const thumb = (id, title, music, inner) =>
+  `<div class="thumb" data-art="${id}‖${(title || "").replace(/"/g, "")}‖${music ? 1 : 0}">${inner || ""}</div>`;
 const mins = (s) => Math.round(s / 60) + " min";
 const progName = (id) => DB.programs.find((p) => p.id === id)?.title || id;
 const topicName = (id) => DB.topics.find((t) => t.id === id)?.name || id;
@@ -48,8 +84,8 @@ const topicName = (id) => DB.topics.find((t) => t.id === id)?.name || id;
 function card(m, badge) {
   const p = store.progress[m.id];
   const pct = p ? Math.round((p.pos / m.durationSec) * 100) : 0;
-  return el(`<button class="card" data-open="${m.id}">
-    <div class="thumb">${badge ? `<span class="badge ${badge === "NEW" ? "new" : ""}">${badge}</span>` : ""}</div>
+  return el(`<button class="card" data-open="${m.id}" data-pv="msg:${m.id}">
+    ${thumb(m.id, m.title, false, badge ? `<span class="badge ${badge === "NEW" ? "new" : ""}">${badge}</span>` : "")}
     <div class="meta"><b>${m.title}</b><div>${m.speaker} · ${mins(m.durationSec)}</div>
     ${pct ? `<div class="progress"><i style="width:${pct}%"></i></div>` : ""}</div></button>`);
 }
@@ -71,11 +107,14 @@ function renderTabs() {
 }
 
 function render() {
+  stopPreview();
   renderTabs();
   const s = document.getElementById("screen");
   s.innerHTML = "";
   ({ Home, Messages, Music, Live, Programs, Favorites, Search })[tab](s);
   s.querySelectorAll("[data-open]").forEach((b) => (b.onclick = () => openDetail(b.dataset.open)));
+  hydrateArtwork(s);
+  wirePreviews(s);
 }
 
 function Home(s) {
@@ -100,10 +139,10 @@ function Home(s) {
   const live = DB.live.find((l) => l.status === "live");
   s.append(rail("Live Now", live ? "on air" : "nothing live — upcoming below",
     (live ? [live] : DB.live.filter((l) => l.status === "scheduled"))
-      .map((l) => el(`<button class="card" data-live="${l.id}"><div class="thumb"><span class="badge">${l.status === "live" ? "● LIVE" : "UPCOMING"}</span></div><div class="meta"><b>${l.title}</b><div>${progName(l.programId)}</div></div></button>`))));
+      .map((l) => el(`<button class="card" data-live="${l.id}"><div class="thumb" data-art="${l.id}‖${l.title}‖0"><span class="badge">${l.status === "live" ? "● LIVE" : "UPCOMING"}</span></div><div class="meta"><b>${l.title}</b><div>${progName(l.programId)}</div></div></button>`))));
   s.append(rail("Pastor Chris", "messages", recent.slice(0, 8).map((m) => card(m))));
   s.append(rail("LoveWorld Music", "curated playlists",
-    DB.playlists.map((p) => el(`<button class="card" data-pl="${p.id}"><div class="thumb music"></div><div class="meta"><b>${p.title}</b><div>${p.songIds.length} songs</div></div></button>`))));
+    DB.playlists.map((p) => el(`<button class="card" data-pl="${p.id}"><div class="thumb" data-art="${p.id}‖${p.title}‖1"></div><div class="meta"><b>${p.title}</b><div>${p.songIds.length} songs</div></div></button>`))));
   s.querySelectorAll("[data-live]").forEach((b) => (b.onclick = () => openLive(b.dataset.live)));
   s.querySelectorAll("[data-pl]").forEach((b) => (b.onclick = () => openPlaylist(b.dataset.pl)));
 }
@@ -124,9 +163,9 @@ function Messages(s) {
 
 function Music(s) {
   s.append(rail("Playlists", "curated",
-    DB.playlists.map((p) => el(`<button class="card" data-pl="${p.id}"><div class="thumb music"></div><div class="meta"><b>${p.title}</b><div>${p.songIds.length} songs</div></div></button>`))));
+    DB.playlists.map((p) => el(`<button class="card" data-pl="${p.id}"><div class="thumb" data-art="${p.id}‖${p.title}‖1"></div><div class="meta"><b>${p.title}</b><div>${p.songIds.length} songs</div></div></button>`))));
   s.append(rail("Artists", "",
-    DB.artists.map((a) => el(`<button class="card" data-artist="${a.id}"><div class="thumb music"></div><div class="meta"><b>${a.name}</b><div>${a.bio}</div></div></button>`))));
+    DB.artists.map((a) => el(`<button class="card" data-artist="${a.id}"><div class="thumb" data-art="${a.id}‖${a.name}‖1"></div><div class="meta"><b>${a.name}</b><div>${a.bio}</div></div></button>`))));
   s.querySelectorAll("[data-pl]").forEach((b) => (b.onclick = () => openPlaylist(b.dataset.pl)));
   s.querySelectorAll("[data-artist]").forEach((b) => (b.onclick = () => {
     const a = DB.artists.find((x) => x.id === b.dataset.artist);
@@ -143,7 +182,7 @@ function Live(s) {
   if (!now.length) {
     s.append(el(`<div class="empty" style="margin-top:14px"><b style="color:var(--text)">Nothing is live right now.</b><br>Catch up below — upcoming and recent broadcasts.</div>`));
   }
-  const mk = (arr, badge) => arr.map((l) => el(`<button class="card" data-live="${l.id}"><div class="thumb"><span class="badge">${badge}</span></div><div class="meta"><b>${l.title}</b><div>${progName(l.programId)}</div></div></button>`));
+  const mk = (arr, badge) => arr.map((l) => el(`<button class="card" data-live="${l.id}"><div class="thumb" data-art="${l.id}‖${l.title}‖0"><span class="badge">${badge}</span></div><div class="meta"><b>${l.title}</b><div>${progName(l.programId)}</div></div></button>`));
   if (now.length) s.append(rail("Live Now", "", mk(now, "● LIVE")));
   s.append(rail("Upcoming", "", mk(up, "UPCOMING")));
   s.append(rail("Recently Live", "", mk(rec, "RECENT")));
@@ -188,9 +227,11 @@ function Search(s) {
     const artists = DB.artists.filter((a) => (a.name + " " + a.bio).toLowerCase().includes(q));
     if (hits.length) out.append(rail(`Messages (${hits.length})`, "", hits.slice(0, 8).map((m) => card(m))));
     if (artists.length) out.append(rail(`Artists (${artists.length})`, "",
-      artists.map((a) => el(`<div class="card"><div class="thumb music"></div><div class="meta"><b>${a.name}</b><div>${a.bio}</div></div></div>`))));
+      artists.map((a) => el(`<div class="card"><div class="thumb" data-art="${a.id}‖${a.name}‖1"></div><div class="meta"><b>${a.name}</b><div>${a.bio}</div></div></div>`))));
     if (!hits.length && !artists.length) out.append(el(`<div class="empty">No results for “${query}”. Try “faith” or “healing”.</div>`));
     out.querySelectorAll("[data-open]").forEach((b) => (b.onclick = () => openDetail(b.dataset.open)));
+    hydrateArtwork(out);
+    wirePreviews(out);
   };
   input.oninput = run;
   if (query) run();
@@ -204,6 +245,8 @@ function openSheet(title, bodyHtml) {
   s.append(d);
   d.querySelector(".back").onclick = render;
   d.querySelectorAll("[data-play]").forEach((b) => (b.onclick = () => playTrack(b.dataset.play)));
+  hydrateArtwork(d);
+  wirePreviews(d);
   window.scrollTo(0, 0);
 }
 
@@ -221,7 +264,7 @@ function openDetail(id) {
       <button class="btn" data-fav="${m.id}">${fav ? "♥ Favorited" : "♡ Favorite"}</button>
       <button class="btn" data-save="${m.id}">${sv ? "Saved ✓" : "Save for Later"}</button>
     </div>
-    <h2>Related</h2><div class="rail">${related.map((r) => `<button class="card" data-open="${r.id}"><div class="thumb"></div><div class="meta"><b>${r.title}</b><div>${mins(r.durationSec)}</div></div></button>`).join("")}</div>`);
+    <h2>Related</h2><div class="rail">${related.map((r) => `<button class="card" data-open="${r.id}" data-pv="msg:${r.id}"><div class="thumb" data-art="${r.id}‖${r.title}‖0"></div><div class="meta"><b>${r.title}</b><div>${mins(r.durationSec)}</div></div></button>`).join("")}</div>`);
   const d = document.getElementById("screen");
   d.querySelector("[data-watch]").onclick = () => {
     const p = store.progress;
@@ -325,6 +368,158 @@ document.getElementById("player").addEventListener("click", (e) => {
   if (act === "prev" && queue.ids.length) { queue.i = Math.max(0, queue.i - 1); playTrack(queue.ids[queue.i]); }
 });
 
+/* ---- Hover previews: 60s message trailers, seconds-long music previews ----
+   Real files listed in media/manifest.json play when present; otherwise
+   messages get an animated trailer card and songs get a synthesized jingle
+   (stand-ins until real media arrives). */
+let pvTimer = null, pvClose = null, pvHover = null, audioCtx = null, audioNodes = [];
+
+function ensureCtx() {
+  if (!audioCtx) { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch { /* no audio */ } }
+  if (audioCtx && audioCtx.state === "suspended") audioCtx.resume().catch(() => {});
+}
+window.addEventListener("pointerdown", ensureCtx, { once: false });
+window.addEventListener("keydown", ensureCtx);
+
+/* Short synthesized preview jingle per song (pitch derived from id). */
+function jingle(songId, seconds) {
+  ensureCtx();
+  if (!audioCtx) return;
+  const scale = [0, 2, 4, 7, 9, 12, 14, 16];
+  const base = 220 * Math.pow(2, (hashStr(songId) % 12) / 12);
+  const t0 = audioCtx.currentTime + 0.05;
+  for (let i = 0; i < seconds; i++) {
+    const f = base * Math.pow(2, scale[(hashStr(songId) + i * 3) % scale.length] / 12);
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = "triangle";
+    o.frequency.value = f;
+    g.gain.setValueAtTime(0, t0 + i);
+    g.gain.linearRampToValueAtTime(0.18, t0 + i + 0.08);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + i + 0.95);
+    o.connect(g).connect(audioCtx.destination);
+    o.start(t0 + i);
+    o.stop(t0 + i + 1);
+    audioNodes.push(o);
+  }
+}
+
+function stopPreview() {
+  clearTimeout(pvHover);
+  pvHover = null;
+  if (pvClose) { pvClose(); pvClose = null; }
+  clearTimeout(pvTimer);
+  audioNodes.forEach((o) => { try { o.stop(); } catch { /* ended */ } });
+  audioNodes = [];
+  document.querySelectorAll("audio[data-pv-audio]").forEach((a) => a.pause());
+  document.getElementById("preview")?.remove();
+}
+
+function placeOverlay(anchor) {
+  const r = anchor.getBoundingClientRect();
+  const box = document.getElementById("preview");
+  const w = Math.min(320, innerWidth - 16);
+  let x = Math.min(Math.max(8, r.left), innerWidth - w - 8);
+  let y = r.bottom + 8;
+  if (y + 200 > innerHeight) y = Math.max(8, r.top - 210);
+  box.style.cssText = `position:fixed;left:${x}px;top:${y}px;width:${w}px;z-index:50`;
+}
+
+function countdown(label, bar, total, onDone) {
+  const t0 = Date.now();
+  const tick = () => {
+    const left = Math.max(0, total - (Date.now() - t0) / 1000);
+    label.textContent = `0:${String(Math.ceil(left)).padStart(2, "0")}`;
+    bar.style.width = `${(100 * (total - left)) / total}%`;
+    if (left <= 0) { stopPreview(); onDone && onDone(); return; }
+    pvTimer = setTimeout(tick, 250);
+  };
+  tick();
+}
+
+function shellOverlay(html) {
+  stopPreview();
+  const box = el(`<div id="preview" class="pv" role="dialog" aria-label="Preview">${html}</div>`);
+  document.body.append(box);
+  pvClose = () => box.remove();
+  return box;
+}
+
+function showTrailer(messageId, anchor) {
+  const m = DB.messages.find((x) => x.id === messageId);
+  if (!m) return;
+  const real = MANIFEST.trailers[messageId];
+  const media = real
+    ? `<video src="${real}" muted autoplay loop playsinline style="width:100%;aspect-ratio:16/9;object-fit:cover;display:block"></video>`
+    : `<div class="pv-zoom" style="background-image:${artwork(m.id, m.title, false)}"></div>`;
+  const box = shellOverlay(`
+    ${media}
+    <div class="pv-meta"><b>${m.title}</b>
+    <div class="pv-sub">TRAILER · <span class="pv-time">1:00</span>${real ? "" : " · preview mock"}</div>
+    <div class="pv-bar"><i></i></div></div>`);
+  box.onclick = () => { stopPreview(); openDetail(messageId); };
+  placeOverlay(anchor);
+  countdown(box.querySelector(".pv-time"), box.querySelector(".pv-bar i"), TRAILER_SEC);
+}
+
+function showMusic(songId, anchor) {
+  const song = DB.songs.find((x) => x.id === songId);
+  if (!song) return;
+  const artist = DB.artists.find((a) => a.id === song.artistId);
+  const box = shellOverlay(`
+    <div class="pv-meta pv-music"><span class="eq"><i></i><i></i><i></i><i></i></span>
+    <div><b>♪ ${song.title}</b><div class="pv-sub">${artist?.name || ""} · preview <span class="pv-time">0:08</span></div></div></div>
+    <div class="pv-bar"><i></i></div>`);
+  placeOverlay(anchor);
+  const real = MANIFEST.previews[songId];
+  if (real) {
+    const a = new Audio(real);
+    a.dataset.pvAudio = "1";
+    a.play().catch(() => {});
+  } else {
+    jingle(songId, MUSIC_PREVIEW_SEC);
+  }
+  countdown(box.querySelector(".pv-time"), box.querySelector(".pv-bar i"), MUSIC_PREVIEW_SEC);
+}
+
+function firstSongOfPlaylist(plId) {
+  const p = DB.playlists.find((x) => x.id === plId);
+  return p?.songIds[0];
+}
+function firstSongOfArtist(artistId) {
+  return DB.songs.find((x) => x.artistId === artistId)?.id;
+}
+
+/* Hover intent (500ms) + keyboard focus trigger previews; leave/blur/scroll/Esc stops. */
+function wirePreviews(scope) {
+  const arm = (node, fn) => {
+    node.addEventListener("mouseenter", () => {
+      clearTimeout(pvHover);
+      pvHover = setTimeout(() => fn(node), 500);
+    });
+    node.addEventListener("mouseleave", stopPreview);
+    node.addEventListener("focus", () => {
+      clearTimeout(pvHover);
+      pvHover = setTimeout(() => fn(node), 500);
+    });
+    node.addEventListener("blur", stopPreview);
+  };
+  scope.querySelectorAll("[data-pv]").forEach((n) => {
+    const [, id] = n.dataset.pv.split(":");
+    arm(n, (a) => showTrailer(id, a));
+  });
+  scope.querySelectorAll("[data-pl]").forEach((n) => arm(n, (a) => {
+    const s = firstSongOfPlaylist(n.dataset.pl);
+    if (s) showMusic(s, a);
+  }));
+  scope.querySelectorAll("[data-artist]").forEach((n) => arm(n, (a) => {
+    const s = firstSongOfArtist(n.dataset.artist);
+    if (s) showMusic(s, a);
+  }));
+  scope.querySelectorAll("[data-play]").forEach((n) => arm(n, (a) => showMusic(n.dataset.play, a)));
+}
+window.addEventListener("scroll", () => { if (document.getElementById("preview")) stopPreview(); }, true);
+window.addEventListener("keydown", (e) => { if (e.key === "Escape") stopPreview(); });
+
 function updateOnline() {
   document.getElementById("offline-bar").hidden = navigator.onLine;
 }
@@ -340,8 +535,12 @@ window.addEventListener("beforeinstallprompt", (e) => {
   b.onclick = () => { b.hidden = true; deferredPrompt.prompt(); deferredPrompt = null; };
 });
 
-fetch("data/seed.json").then((r) => r.json()).then((db) => {
+Promise.all([
+  fetch("data/seed.json").then((r) => r.json()),
+  fetch("media/manifest.json").then((r) => r.json()).catch(() => ({ artwork: {}, trailers: {}, previews: {} })),
+]).then(([db, manifest]) => {
   DB = db;
+  MANIFEST = { artwork: {}, trailers: {}, previews: {}, ...manifest };
   migrateLegacy();
   // Premium granted while away (callback page) lands on the active profile.
   if (localStorage.getItem("pco.pendingPremium") === "1" && activeId()) {
@@ -377,6 +576,7 @@ function paintAvatar() {
 }
 
 function renderPicker() {
+  stopPreview();
   const s = document.getElementById("screen");
   s.innerHTML = "";
   const wrap = el(`<div style="text-align:center;padding:40px 0"><div class="kicker">PCO TV · WHO'S WATCHING?</div>
