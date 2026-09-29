@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0E0C0A">
+<meta name="description" content="PCO TV — Pastor Chris messages, LoveWorld music, live programming.">
+<title>PCO TV</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon.svg">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="nav">
+  <div class="logo">PCO <span>TV</span></div>
+  <nav id="tabs" aria-label="Primary"></nav>
+  <button id="install" hidden>Install app</button>
+</header>
+<main id="screen"></main>
+<div id="player" hidden>
+  <div id="player-title">Now playing</div>
+  <div class="player-row">
+    <button data-act="prev" aria-label="Previous">⏮</button>
+    <button data-act="toggle" aria-label="Play or pause">⏯</button>
+    <button data-act="next" aria-label="Next">⏭</button>
+    <button data-act="close" aria-label="Close player">✕</button>
+  </div>
+</div>
+<div id="offline-bar" hidden>You are offline — showing saved content.</div>
+<noscript>PCO TV needs JavaScript.</noscript>
+<script src="app.js" defer></script>
+</body>
+</html>

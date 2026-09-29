@@ -1,0 +1,15 @@
+{
+  "name": "PCO TV",
+  "short_name": "PCO TV",
+  "description": "Turn on. Find something meaningful. Watch. Pastor Chris messages, LoveWorld music, live programming.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#0E0C0A",
+  "theme_color": "#0E0C0A",
+  "icons": [
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icons/maskable.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

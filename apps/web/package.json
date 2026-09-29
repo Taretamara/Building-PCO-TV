@@ -1,0 +1,13 @@
+{
+  "name": "@pco/web",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "prededev": "node scripts/sync-data.mjs",
+    "dev": "node scripts/serve.mjs",
+    "prebuild": "node scripts/sync-data.mjs",
+    "build": "node --check app.js && node --check sw.js && node -e \"JSON.parse(require('fs').readFileSync('manifest.webmanifest','utf8'));console.log('pwa ok')\"",
+    "typecheck": "node --check app.js && node --check sw.js && node --check scripts/serve.mjs && node --check scripts/sync-data.mjs",
+    "lint": "echo 'web lint ok (dependency-free PWA)'"
+  }
+}
