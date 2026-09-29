@@ -20,7 +20,7 @@
     const r = await fetch("/api/paystack/verify?reference=" + encodeURIComponent(ref));
     const v = await r.json();
     if (v.status === "success") {
-      localStorage.setItem("pco.premium", "1");
+      localStorage.setItem("pco.pendingPremium", "1");
       out.innerHTML = "<div class='detail'><h2>★ You're subscribed (test mode)</h2>" +
         "<p style='color:var(--muted)'>No real charge was made. Premium playlists are now unlocked on this device.</p>" +
         "<div class='rowbtns'><a class='btn primary' href='index.html' style='text-decoration:none'>Back to PCO TV</a></div></div>";

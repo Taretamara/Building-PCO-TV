@@ -1,15 +1,42 @@
-/* PCO TV PWA — test-data app. No accounts, no network calls besides local seed. */
+/* PCO TV PWA — test-data app. Device profiles, no accounts, no backend. */
 const TABS = ["Home", "Messages", "Music", "Live", "Programs", "Favorites", "Search"];
+const DEFAULT_PROFILES = [
+  { id: "tare", name: "Tare", color: "#D9A441" },
+  { id: "mom", name: "Mom", color: "#7FB2E5" },
+  { id: "dad", name: "Dad", color: "#7FD6B2" },
+  { id: "kids", name: "Kids", color: "#E8AFAF" },
+];
+function profiles() { return JSON.parse(localStorage.getItem("pco.profiles") || "null") || DEFAULT_PROFILES; }
+function activeId() { return localStorage.getItem("pco.activeProfile") || ""; }
+function activeProfile() { return profiles().find((p) => p.id === activeId()); }
+const K = (k) => `pco.${activeId()}.${k}`;
 const store = {
-  get favs() { return JSON.parse(localStorage.getItem("pco.favs") || "[]"); },
-  set favs(v) { localStorage.setItem("pco.favs", JSON.stringify(v)); },
-  get saved() { return JSON.parse(localStorage.getItem("pco.saved") || "[]"); },
-  set saved(v) { localStorage.setItem("pco.saved", JSON.stringify(v)); },
-  get progress() { return JSON.parse(localStorage.getItem("pco.progress") || "{}"); },
-  set progress(v) { localStorage.setItem("pco.progress", JSON.stringify(v)); },
-  get follows() { return JSON.parse(localStorage.getItem("pco.follows") || "[]"); },
-  set follows(v) { localStorage.setItem("pco.follows", JSON.stringify(v)); },
+  get favs() { return JSON.parse(localStorage.getItem(K("favs")) || "[]"); },
+  set favs(v) { localStorage.setItem(K("favs"), JSON.stringify(v)); },
+  get saved() { return JSON.parse(localStorage.getItem(K("saved")) || "[]"); },
+  set saved(v) { localStorage.setItem(K("saved"), JSON.stringify(v)); },
+  get progress() { return JSON.parse(localStorage.getItem(K("progress")) || "{}"); },
+  set progress(v) { localStorage.setItem(K("progress"), JSON.stringify(v)); },
+  get follows() { return JSON.parse(localStorage.getItem(K("follows")) || "[]"); },
+  set follows(v) { localStorage.setItem(K("follows"), JSON.stringify(v)); },
 };
+/** One-time migration: old device-wide data + premium flag move into the first profile. */
+function migrateLegacy() {
+  if (localStorage.getItem("pco.profiles")) return;
+  localStorage.setItem("pco.profiles", JSON.stringify(DEFAULT_PROFILES));
+  // Returning device? Move old device-wide data into Tare and stay signed in.
+  // Fresh device? Leave no active profile so the picker shows.
+  let returning = false;
+  for (const k of ["favs", "saved", "progress", "follows", "premium"]) {
+    const old = localStorage.getItem(`pco.${k}`);
+    if (old !== null) {
+      localStorage.setItem(`pco.tare.${k}`, old);
+      localStorage.removeItem(`pco.${k}`);
+      returning = true;
+    }
+  }
+  if (returning) localStorage.setItem("pco.activeProfile", "tare");
+}
 let DB = null, tab = "Home", topicFilter = "", query = "";
 let queue = { ids: [], i: 0 };
 
@@ -55,8 +82,9 @@ function Home(s) {
   const msgs = DB.messages.filter((m) => m.status === "published");
   const recent = [...msgs].sort((a, b) => (a.publishedAt < b.publishedAt ? 1 : -1));
   const cwIds = Object.keys(store.progress);
-  const premium = localStorage.getItem("pco.premium") === "1";
-  const hero = el(`<div class="hero"><div class="kicker">WELCOME BACK · TEST DATA ${premium ? "· ★ PREMIUM" : ""}</div>
+  const premium = isPremium();
+  const who = activeProfile()?.name.toUpperCase() || "FRIEND";
+  const hero = el(`<div class="hero"><div class="kicker">WELCOME BACK, ${who} ${premium ? "· ★ PREMIUM" : ""}</div>
     <h1>Turn on. Find something meaningful. Watch.</h1>
     <p>Pastor Chris messages, LoveWorld music, and live programming.</p>
     <div class="rowbtns"><button class="btn primary" id="hero-play">▶ Continue Watching</button>
@@ -221,7 +249,7 @@ function openLive(id) {
 }
 
 const PREMIUM_PLAYLIST = "pl-006"; // "Pastor Chris Recommended" — subscriber-only demo gate
-const isPremium = () => localStorage.getItem("pco.premium") === "1";
+const isPremium = () => localStorage.getItem(K("premium")) === "1";
 
 function openPlaylist(id) {
   const p = DB.playlists.find((x) => x.id === id);
@@ -314,10 +342,60 @@ window.addEventListener("beforeinstallprompt", (e) => {
 
 fetch("data/seed.json").then((r) => r.json()).then((db) => {
   DB = db;
+  migrateLegacy();
+  // Premium granted while away (callback page) lands on the active profile.
+  if (localStorage.getItem("pco.pendingPremium") === "1" && activeId()) {
+    localStorage.setItem(K("premium"), "1");
+    localStorage.removeItem("pco.pendingPremium");
+  }
   updateOnline();
-  render();
+  ensureAvatar();
+  if (!activeId()) renderPicker();
+  else render();
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 }).catch(() => {
   document.getElementById("screen").innerHTML =
     `<div class="empty" style="margin-top:14px">Couldn't load test data. Serve over http: <b>node scripts/serve.mjs</b> then open http://localhost:5173/index.html</div>`;
 });
+
+/* ---- Profiles (device-only demo login, PRD §19 family experience) ---- */
+
+function ensureAvatar() {
+  if (document.getElementById("profile-btn")) return;
+  const b = el(`<button id="profile-btn" aria-label="Switch profile"></button>`);
+  b.onclick = renderPicker;
+  document.querySelector(".nav").insertBefore(b, document.getElementById("install"));
+  paintAvatar();
+}
+
+function paintAvatar() {
+  const b = document.getElementById("profile-btn");
+  if (!b) return;
+  const p = activeProfile();
+  b.textContent = p ? p.name[0].toUpperCase() : "?";
+  b.style.cssText = `margin-left:8px;width:38px;height:38px;border-radius:50%;border:2px solid ${p ? p.color : "#8A7D68"};background:#201914;color:#F7F1E6;font-size:17px;font-weight:800`;
+}
+
+function renderPicker() {
+  const s = document.getElementById("screen");
+  s.innerHTML = "";
+  const wrap = el(`<div style="text-align:center;padding:40px 0"><div class="kicker">PCO TV · WHO'S WATCHING?</div>
+    <h1 style="font-size:32px">Choose your profile</h1>
+    <p style="color:var(--muted)">Demo login — profiles live on this device only. Each person gets their own favorites, progress, and subscriptions.</p>
+    <div id="plist" style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:20px"></div></div>`);
+  s.append(wrap);
+  const list = wrap.querySelector("#plist");
+  profiles().forEach((p) => {
+    const t = el(`<button style="background:var(--surface);border:2px solid ${p.color};border-radius:16px;padding:22px 26px;color:var(--text);font-size:17px;min-width:130px">
+      <div style="font-size:34px;font-weight:800;color:${p.color}">${p.name[0]}</div>${p.name}</button>`);
+    t.onclick = () => {
+      localStorage.setItem("pco.activeProfile", p.id);
+      tab = "Home";
+      paintAvatar();
+      render();
+      window.scrollTo(0, 0);
+    };
+    list.append(t);
+  });
+  window.scrollTo(0, 0);
+}
