@@ -1,5 +1,5 @@
 /* PCO TV PWA — test-data app. Device profiles, no accounts, no backend. */
-const TABS = ["Home", "Messages", "Music", "Live", "Programs", "Favorites", "Search"];
+const TABS = ["Home", "Messages", "Music", "Live", "Programs", "Favorites", "Community", "Search"];
 const DEFAULT_PROFILES = [
   { id: "tare", name: "Tare", color: "#D9A441" },
   { id: "mom", name: "Mom", color: "#7FB2E5" },
@@ -19,7 +19,72 @@ const store = {
   set progress(v) { localStorage.setItem(K("progress"), JSON.stringify(v)); },
   get follows() { return JSON.parse(localStorage.getItem(K("follows")) || "[]"); },
   set follows(v) { localStorage.setItem(K("follows"), JSON.stringify(v)); },
+  get comments() { return JSON.parse(localStorage.getItem(K("comments")) || "{}"); },
+  set comments(v) { localStorage.setItem(K("comments"), JSON.stringify(v)); },
 };
+
+/* Seeded community voices (test data). Real community needs a moderated backend. */
+const DEMO_COMMENTS = [
+  { msg: "m-001", name: "Grace", text: "I learnt that faith speaks before it sees. I'm declaring over my family daily now.", amens: 14 },
+  { msg: "m-001", name: "Emeka", text: "The part on patience with faith reset my prayer life. Thank you Pastor.", amens: 9 },
+  { msg: "m-002", name: "Sarah", text: "Watched with my mum — we both cried at the testimonies. Healing is ours!", amens: 21 },
+  { msg: "m-005", name: "David", text: "Walking with the Spirit daily: my takeaway is morning fellowship first, phone second.", amens: 7 },
+  { msg: "m-006", name: "Faith", text: "Effective fervent prayer — I finally understand why consistency matters more than length.", amens: 11 },
+];
+
+function getComments(msgId) {
+  const mine = (store.comments[msgId] || []).map((c) => ({ ...c, mine: true }));
+  const seeded = DEMO_COMMENTS.filter((c) => c.msg === msgId);
+  return [...mine, ...seeded];
+}
+
+function postComment(msgId, text) {
+  const all = store.comments;
+  const list = all[msgId] || [];
+  list.unshift({ name: activeProfile()?.name || "Viewer", text: text.trim(), at: Date.now(), amens: [] });
+  all[msgId] = list;
+  store.comments = all;
+}
+
+function toggleAmen(msgId, idx) {
+  const all = store.comments;
+  const list = all[msgId] || [];
+  const me = activeId();
+  const c = list[idx];
+  if (!c) return;
+  c.amens = c.amens.includes(me) ? c.amens.filter((x) => x !== me) : [...c.amens, me];
+  all[msgId] = list;
+  store.comments = all;
+}
+
+function amenCount(c) {
+  return Array.isArray(c.amens) ? c.amens.length : c.amens;
+}
+
+function commentListHtml(msgId) {
+  const list = getComments(msgId);
+  if (!list.length) return `<div class="empty">No reflections yet — share the first one below. What did you learn?</div>`;
+  return list.map((c, i) => `
+    <div class="comment"><b>${c.name}</b>${c.mine ? ` <small>(you)</small>` : ""}
+    <p>${c.text}</p>
+    <button class="amen" data-amen="${msgId}:${c.mine ? "u" + i : "s" + i}">🙏 Amen · ${amenCount(c)}</button></div>`).join("");
+}
+
+function wireComments(scope, msgId, rerender) {
+  scope.querySelectorAll("[data-amen]").forEach((b) => (b.onclick = () => {
+    const [mid, ref] = b.dataset.amen.split(":");
+    if (ref.startsWith("u")) toggleAmen(mid, +ref.slice(1));
+    rerender();
+  }));
+  const form = scope.querySelector("[data-cform]");
+  if (form) form.onsubmit = (e) => {
+    e.preventDefault();
+    const input = scope.querySelector("[data-cinput]");
+    if (!input.value.trim()) return;
+    postComment(msgId, input.value);
+    rerender();
+  };
+}
 /** One-time migration: old device-wide data + premium flag move into the first profile. */
 function migrateLegacy() {
   if (localStorage.getItem("pco.profiles")) return;
@@ -111,7 +176,7 @@ function render() {
   renderTabs();
   const s = document.getElementById("screen");
   s.innerHTML = "";
-  ({ Home, Messages, Music, Live, Programs, Favorites, Search })[tab](s);
+  ({ Home, Messages, Music, Live, Programs, Favorites, Community, Search })[tab](s);
   s.querySelectorAll("[data-open]").forEach((b) => (b.onclick = () => openDetail(b.dataset.open)));
   hydrateArtwork(s);
   wirePreviews(s);
@@ -213,6 +278,51 @@ function Favorites(s) {
   if (saved.length) s.append(rail("", "", toCards(saved)));
 }
 
+function relatedFor(id, n = 4) {
+  const m = DB.messages.find((x) => x.id === id);
+  if (!m) return [];
+  return DB.messages.filter((x) => x.id !== id && x.status === "published" &&
+    (x.programId === m.programId || x.topicIds.some((t) => m.topicIds.includes(t)))).slice(0, n);
+}
+
+/* Post-watch moment: reflect, read the community, keep watching. */
+function openFinished(id) {
+  const m = DB.messages.find((x) => x.id === id);
+  if (!m) return;
+  const next = relatedFor(id);
+  openSheet(`✓ Finished: ${m.title}`, `
+    <div class="kicker">WHAT DID YOU LEARN?</div>
+    <p style="color:var(--muted)">Before you move on — capture one takeaway for yourself and the family.</p>
+    <div data-clist>${commentListHtml(id)}</div>
+    <form data-cform><input data-cinput class="searchbar" placeholder="I learnt that…" aria-label="Share what you learnt">
+    <div class="rowbtns"><button class="btn primary" type="submit">Post reflection</button></div></form>
+    <h2>Keep watching</h2><div class="rail">${next.map((r) => `<button class="card" data-open="${r.id}"><div class="thumb" data-art="${r.id}‖${r.title}‖0"></div><div class="meta"><b>${r.title}</b><div>${mins(r.durationSec)}</div></div></button>`).join("")}</div>`);
+  const d = document.getElementById("screen");
+  wireComments(d, id, () => openFinished(id));
+  d.querySelectorAll("[data-open]").forEach((b) => (b.onclick = () => openDetail(b.dataset.open)));
+}
+
+function Community(s) {
+  s.append(el(`<div class="hero"><div class="kicker">LEARN OUT LOUD · TEST DATA</div>
+    <h1>What the family learnt this week</h1>
+    <p>Reflections from every profile on this device, plus seeded community voices. Real community ships with moderation (post-MVP).</p></div>`));
+  const items = [];
+  for (const mid of Object.keys(store.comments)) {
+    for (const c of store.comments[mid]) items.push({ msgId: mid, ...c, when: c.at || 0 });
+  }
+  for (const c of DEMO_COMMENTS) items.push({ msgId: c.msg, name: c.name, text: c.text, amens: c.amens, when: 0 });
+  items.sort((a, b) => b.when - a.when);
+  const wrap = el(`<div></div>`);
+  if (!items.length) wrap.append(el(`<div class="empty">No reflections yet. Finish any message — you'll be invited to share what you learnt.</div>`));
+  items.slice(0, 20).forEach((c) => {
+    const m = DB.messages.find((x) => x.id === c.msgId);
+    wrap.append(el(`<div class="comment"><b>${c.name}</b> <small>on “${m?.title || c.msgId}”</small><p>${c.text}</p>
+      <div class="rowbtns"><button class="btn" data-open="${c.msgId}">Watch & join in</button></div></div>`));
+  });
+  s.append(wrap);
+  s.querySelectorAll("[data-open]").forEach((b) => (b.onclick = () => openDetail(b.dataset.open)));
+}
+
 function Search(s) {
   const input = el(`<input class="searchbar" placeholder="Search messages, programs, music, artists" value="${query}" aria-label="Search">`);
   s.append(el(`<h2>Search</h2>`), input);
@@ -264,7 +374,10 @@ function openDetail(id) {
       <button class="btn" data-fav="${m.id}">${fav ? "♥ Favorited" : "♡ Favorite"}</button>
       <button class="btn" data-save="${m.id}">${sv ? "Saved ✓" : "Save for Later"}</button>
     </div>
-    <h2>Related</h2><div class="rail">${related.map((r) => `<button class="card" data-open="${r.id}" data-pv="msg:${r.id}"><div class="thumb" data-art="${r.id}‖${r.title}‖0"></div><div class="meta"><b>${r.title}</b><div>${mins(r.durationSec)}</div></div></button>`).join("")}</div>`);
+    <h2>Related</h2><div class="rail">${related.map((r) => `<button class="card" data-open="${r.id}" data-pv="msg:${r.id}"><div class="thumb" data-art="${r.id}‖${r.title}‖0"></div><div class="meta"><b>${r.title}</b><div>${mins(r.durationSec)}</div></div></button>`).join("")}</div>
+    <h2>💬 What did you learn?</h2><div data-clist>${commentListHtml(id)}</div>
+    <form data-cform><input data-cinput class="searchbar" placeholder="Share what you learnt…" aria-label="Share what you learnt">
+    <div class="rowbtns"><button class="btn primary" type="submit">Post reflection</button></div></form>`);
   const d = document.getElementById("screen");
   d.querySelector("[data-watch]").onclick = () => {
     const p = store.progress;
@@ -283,6 +396,7 @@ function openDetail(id) {
     openDetail(id);
   };
   d.querySelectorAll("[data-open]").forEach((b) => (b.onclick = () => openDetail(b.dataset.open)));
+  wireComments(d, id, () => openDetail(id));
 }
 
 function openLive(id) {
@@ -350,7 +464,7 @@ function playTrack(id, isVideo) {
     const timer = setInterval(() => {
       const p = store.progress;
       const cur = (p[id]?.pos || 0) + 30;
-      if (cur >= m.durationSec - 15) { delete p[id]; store.progress = p; clearInterval(timer); return; }
+      if (cur >= m.durationSec - 15) { delete p[id]; store.progress = p; clearInterval(timer); openFinished(id); return; }
       p[id] = { pos: cur };
       store.progress = p;
     }, 4000);
