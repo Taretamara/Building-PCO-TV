@@ -1,0 +1,22 @@
+[build]
+  publish = "apps/web"
+  functions = "netlify/functions"
+
+# Keep the PWA's /api/* paths working on Netlify
+[[redirects]]
+  from = "/api/paystack/initialize"
+  to = "/.netlify/functions/paystack-initialize"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/paystack/verify"
+  to = "/.netlify/functions/paystack-verify"
+  status = 200
+  force = true
+
+# Service worker must never be cached or updates won't reach browsers
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"

@@ -16,14 +16,13 @@ pnpm --filter @pco/web dev
 - `sw.js` — caches the app shell + seed for offline use.
 - `scripts/serve.mjs` — zero-dependency static server (service workers require http, not file://) + Paystack init/verify endpoints (secret key server-side only).
 
-## Deploy (free, Render)
-1. Push to GitHub (done — `render.yaml` is in the repo root).
-2. Go to **render.com** → New → **Web Service** → connect `Taretamara/Building-PCO-TV`.
-3. Render reads `render.yaml` automatically (root `apps/web`, free plan).
-4. In the service dashboard → **Environment** → add `PAYSTACK_SECRET_KEY` = your **test** key (paste in Render's dashboard only — never in code).
-5. Open the Render URL (`https://pco-tv-web.onrender.com/index.html`). HTTPS makes the service worker + install prompt work.
-6. Test checkout uses the live domain automatically (dynamic `callback.html` URL). Test card: `4084084084084081`. No real charge in test mode.
-Note: free services sleep after inactivity — first load can take ~30s.
+## Deploy (free, Netlify)
+1. Push to GitHub (done — `netlify.toml` is in the repo root).
+2. Go to **app.netlify.com** → Add new site → **Import an existing project** → connect GitHub → `Taretamara/Building-PCO-TV`.
+3. Netlify reads `netlify.toml` automatically: publishes `apps/web`, loads serverless functions from `netlify/functions`.
+4. Site settings → **Environment variables** → add `PAYSTACK_SECRET_KEY` = your **test** key (paste in Netlify's dashboard only — never in code). Redeploy after adding.
+5. Open the Netlify URL (`https://YOUR-SITE.netlify.app/index.html`). HTTPS makes the service worker + install prompt work.
+6. Subscribe flow works unchanged: `/api/paystack/*` routes to the functions, callback URL adapts to the live domain. Test card: `4084084084084081`. No real charge in test mode.
 
 ## Test-mode subscriptions (Paystack)
 - Home hero has **Subscribe — ₦1,500/mo (test)**; the "Pastor Chris Recommended" playlist is locked until subscribed.
