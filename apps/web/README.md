@@ -16,6 +16,15 @@ pnpm --filter @pco/web dev
 - `sw.js` — caches the app shell + seed for offline use.
 - `scripts/serve.mjs` — zero-dependency static server (service workers require http, not file://) + Paystack init/verify endpoints (secret key server-side only).
 
+## Deploy (free, Render)
+1. Push to GitHub (done — `render.yaml` is in the repo root).
+2. Go to **render.com** → New → **Web Service** → connect `Taretamara/Building-PCO-TV`.
+3. Render reads `render.yaml` automatically (root `apps/web`, free plan).
+4. In the service dashboard → **Environment** → add `PAYSTACK_SECRET_KEY` = your **test** key (paste in Render's dashboard only — never in code).
+5. Open the Render URL (`https://pco-tv-web.onrender.com/index.html`). HTTPS makes the service worker + install prompt work.
+6. Test checkout uses the live domain automatically (dynamic `callback.html` URL). Test card: `4084084084084081`. No real charge in test mode.
+Note: free services sleep after inactivity — first load can take ~30s.
+
 ## Test-mode subscriptions (Paystack)
 - Home hero has **Subscribe — ₦1,500/mo (test)**; the "Pastor Chris Recommended" playlist is locked until subscribed.
 - Flow: email → server `POST /api/paystack/initialize` (secret key stays in repo-root `.env`, never in browser) → Paystack test checkout → `callback.html` verifies → premium flag in `localStorage`.

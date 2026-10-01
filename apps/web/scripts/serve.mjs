@@ -31,6 +31,12 @@ function json(res, code, obj) {
   res.writeHead(code, { "Content-Type": "application/json" }).end(JSON.stringify(obj));
 }
 
+function baseUrl(req) {
+  const host = req.headers["x-forwarded-host"] || req.headers.host || `localhost:${PORT}`;
+  const proto = req.headers["x-forwarded-proto"] || (host.startsWith("localhost") ? "http" : "https");
+  return `${proto}://${host}`;
+}
+
 function readBody(req) {
   return new Promise((resolve, reject) => {
     let s = "";
@@ -50,6 +56,7 @@ async function paystack(path, secret, body) {
   return r.json();
 }
 
+const PORT = process.env.PORT || 5173;
 createServer(async (req, res) => {
   const url = new URL(req.url, "http://x");
 
@@ -66,7 +73,7 @@ createServer(async (req, res) => {
       const out = await paystack("/transaction/initialize", secret, {
         email: body.email,
         amount,
-        callback_url: "http://localhost:5173/callback.html",
+        callback_url: `${baseUrl(req)}/callback.html`,
       });
       if (!out.status) return json(res, 502, { error: "provider declined request" });
       return json(res, 200, { authorization_url: out.data.authorization_url, reference: out.data.reference });
@@ -93,4 +100,4 @@ createServer(async (req, res) => {
     return;
   }
   res.writeHead(200, { "Content-Type": types[extname(file)] ?? "application/octet-stream" }).end(readFileSync(file));
-}).listen(5173, () => console.log("PCO TV PWA at http://localhost:5173/index.html"));
+}).listen(PORT, () => console.log(`PCO TV PWA on port ${PORT}`));
