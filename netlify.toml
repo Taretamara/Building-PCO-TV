@@ -1,6 +1,8 @@
 [build]
   publish = "apps/web"
   functions = "netlify/functions"
+  # Skip builds when a push touches nothing the site uses (saves build minutes)
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- apps/web netlify.toml netlify/functions/"
 
 # Keep the PWA's /api/* paths working on Netlify
 [[redirects]]
