@@ -194,6 +194,8 @@ function Home(s) {
     <div class="rowbtns"><button class="btn primary" id="hero-play">▶ Continue Watching</button>
     ${premium ? "" : `<button class="btn" id="hero-sub">★ Subscribe — ₦1,500/mo (test)</button>`}</div></div>`);
   s.append(hero);
+  const banner = installBanner();
+  if (banner) s.append(banner);
   hero.querySelector("#hero-play").onclick = () => cwIds.length && openDetail(cwIds[0]);
   const subBtn = hero.querySelector("#hero-sub");
   if (subBtn) subBtn.onclick = openSubscribe;
@@ -640,14 +642,52 @@ function updateOnline() {
 window.addEventListener("online", updateOnline);
 window.addEventListener("offline", updateOnline);
 
+/* ---- Install: always-visible button + per-device guide ----
+   Chrome/Android may offer a one-tap prompt (beforeinstallprompt); every
+   other browser gets simple manual steps. No prompt? The guide still works. */
 let deferredPrompt = null;
 window.addEventListener("beforeinstallprompt", (e) => {
   e.preventDefault();
   deferredPrompt = e;
+});
+
+function installSteps() {
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const android = /android/i.test(navigator.userAgent);
+  if (ios) return `<b>iPhone / iPad</b><br>1. Tap <b>Share</b> (square with arrow) below.<br>2. Tap <b>Add to Home Screen</b>.<br>3. Tap <b>Add</b> — PCO TV opens fullscreen like a real app.`;
+  if (android) return `<b>Android</b><br>1. Tap the <b>⋮ menu</b> (top right).<br>2. Tap <b>Add to Home screen</b> or <b>Install app</b>.<br>3. Confirm — find PCO TV on your home screen.`;
+  return `<b>Computer</b><br>1. Click the <b>install icon</b> at the right of the address bar.<br>2. Click <b>Install</b>.<br>Or Chrome menu (⋮) → <b>Save and share → Install page as app</b>.`;
+}
+
+function openInstallGuide() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt = null;
+    return;
+  }
+  openSheet("📲 Install PCO TV", `
+    <p style="color:var(--muted)">Get the app icon, fullscreen viewing, and offline access. Free, no app store needed.</p>
+    <p>${installSteps()}</p>`);
+}
+
+function setupInstallButton() {
   const b = document.getElementById("install");
   b.hidden = false;
-  b.onclick = () => { b.hidden = true; deferredPrompt.prompt(); deferredPrompt = null; };
-});
+  b.onclick = openInstallGuide;
+}
+
+function installBanner() {
+  if (localStorage.getItem("pco.installDismissed") === "1") return null;
+  if (window.matchMedia("(display-mode: standalone)").matches) return null;
+  const bar = el(`<div class="install-banner"><div><b>📲 Get the PCO TV app</b><div>Icon, fullscreen, works offline — free.</div></div>
+    <div class="rowbtns"><button class="btn primary" id="ib-go">Install</button><button class="btn" id="ib-no">Later</button></div></div>`);
+  bar.querySelector("#ib-go").onclick = openInstallGuide;
+  bar.querySelector("#ib-no").onclick = () => {
+    localStorage.setItem("pco.installDismissed", "1");
+    bar.remove();
+  };
+  return bar;
+}
 
 Promise.all([
   fetch("data/seed.json").then((r) => r.json()),
@@ -663,6 +703,7 @@ Promise.all([
   }
   updateOnline();
   ensureAvatar();
+  setupInstallButton();
   if (!activeId()) renderPicker();
   else render();
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
