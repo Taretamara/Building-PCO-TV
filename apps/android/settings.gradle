@@ -1,0 +1,18 @@
+// PCO TV Android wrapper: fullscreen WebView around the PWA (test build).
+// Package source lives in the repo; the signing keystore does NOT (see docs/ANDROID_APK.md).
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+rootProject.name = "PCO TV"
+include(":app")

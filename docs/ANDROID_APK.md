@@ -1,4 +1,29 @@
-# PCO TV — Android APK via PWABuilder (free)
+# PCO TV — Android APK (test build v1.0)
+
+## Install (easiest)
+GitHub → Releases → **v1.0-apk** → download `pco-tv-1.0.apk` → send to the
+phone → tap → allow **Install unknown apps** → Install. Opens your live PWA
+fullscreen with the PCO TV icon.
+
+## Rebuild locally
+Source: `apps/android/` (WebView wrapper, no native code beyond one Activity).
+Needs JDK 17 + Android SDK 34 + Gradle 8.10 (see commit history for setup).
+```bash
+export JAVA_HOME=/opt/homebrew/opt/openjdk@17 ANDROID_HOME=$HOME/android-sdk
+export PCO_STORE_PASSWORD=$(cat ~/.pco-android/store.pass)
+export PCO_KEY_PASSWORD=$PCO_STORE_PASSWORD PCO_KEY_ALIAS=pco
+~/gradle-8/gradle-8.10.2/bin/gradle -p apps/android assembleRelease
+```
+APK: `apps/android/app/build/outputs/apk/release/app-release.apk`.
+
+## Keystore warning (important)
+Signing key: `~/.pco-android/pco-release.keystore` — backed up NOWHERE else,
+intentionally never committed. **Back it up** (encrypted USB/drive): every
+future update must be signed with this same key or Android treats it as a
+different app. Password: `~/.pco-android/store.pass` (chmod 600).
+Play Store later needs this same keystore for the `.aab`.
+
+## Alternative (no toolchain): PWABuilder
 
 Wraps the live PWA (`https://bejewelled-semolina-f0a16d.netlify.app`) into an
 installable APK (Trusted Web Activity). No Android Studio needed.
