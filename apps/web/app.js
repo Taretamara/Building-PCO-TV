@@ -65,8 +65,8 @@ function commentListHtml(msgId) {
   const list = getComments(msgId);
   if (!list.length) return `<div class="empty">No reflections yet — share the first one below. What did you learn?</div>`;
   return list.map((c, i) => `
-    <div class="comment"><b>${c.name}</b>${c.mine ? ` <small>(you)</small>` : ""}
-    <p>${c.text}</p>
+    <div class="comment"><b>${esc(c.name)}</b>${c.mine ? ` <small>(you)</small>` : ""}
+    <p>${esc(c.text)}</p>
     <button class="amen" data-amen="${msgId}:${c.mine ? "u" + i : "s" + i}">🙏 Amen · ${amenCount(c)}</button></div>`).join("");
 }
 
@@ -106,6 +106,8 @@ let DB = null, tab = "Home", topicFilter = "", query = "";
 let queue = { ids: [], i: 0 };
 
 const el = (html) => { const t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstChild; };
+/* User-typed text must never reach innerHTML raw (stored/reflected XSS). */
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const TRAILER_SEC = 60;   // message hover preview length
 const MUSIC_PREVIEW_SEC = 8; // music hover preview length
 let MANIFEST = { artwork: {}, trailers: {}, previews: {} };
@@ -318,7 +320,7 @@ function Community(s) {
   if (!items.length) wrap.append(el(`<div class="empty">No reflections yet. Finish any message — you'll be invited to share what you learnt.</div>`));
   items.slice(0, 20).forEach((c) => {
     const m = DB.messages.find((x) => x.id === c.msgId);
-    wrap.append(el(`<div class="comment"><b>${c.name}</b> <small>on “${m?.title || c.msgId}”</small><p>${c.text}</p>
+    wrap.append(el(`<div class="comment"><b>${esc(c.name)}</b> <small>on “${esc(m?.title || c.msgId)}”</small><p>${esc(c.text)}</p>
       <div class="rowbtns"><button class="btn" data-open="${c.msgId}">Watch & join in</button></div></div>`));
   });
   s.append(wrap);
@@ -326,7 +328,7 @@ function Community(s) {
 }
 
 function Search(s) {
-  const input = el(`<input class="searchbar" placeholder="Search messages, programs, music, artists" value="${query}" aria-label="Search">`);
+  const input = el(`<input class="searchbar" placeholder="Search messages, programs, music, artists" value="${esc(query)}" aria-label="Search">`);
   s.append(el(`<h2>Search</h2>`), input);
   const out = el(`<div></div>`);
   s.append(out);
@@ -340,7 +342,7 @@ function Search(s) {
     if (hits.length) out.append(rail(`Messages (${hits.length})`, "", hits.slice(0, 8).map((m) => card(m))));
     if (artists.length) out.append(rail(`Artists (${artists.length})`, "",
       artists.map((a) => el(`<div class="card"><div class="thumb" data-art="${a.id}‖${a.name}‖1"></div><div class="meta"><b>${a.name}</b><div>${a.bio}</div></div></div>`))));
-    if (!hits.length && !artists.length) out.append(el(`<div class="empty">No results for “${query}”. Try “faith” or “healing”.</div>`));
+    if (!hits.length && !artists.length) out.append(el(`<div class="empty">No results for “${esc(query)}”. Try “faith” or “healing”.</div>`));
     out.querySelectorAll("[data-open]").forEach((b) => (b.onclick = () => openDetail(b.dataset.open)));
     hydrateArtwork(out);
     wirePreviews(out);
