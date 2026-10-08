@@ -12,15 +12,15 @@ function activeProfile() { return profiles().find((p) => p.id === activeId()); }
 const K = (k) => `pco.${activeId()}.${k}`;
 const store = {
   get favs() { return JSON.parse(localStorage.getItem(K("favs")) || "[]"); },
-  set favs(v) { localStorage.setItem(K("favs"), JSON.stringify(v)); },
+  set favs(v) { localStorage.setItem(K("favs"), JSON.stringify(v)); scheduleSync(); },
   get saved() { return JSON.parse(localStorage.getItem(K("saved")) || "[]"); },
-  set saved(v) { localStorage.setItem(K("saved"), JSON.stringify(v)); },
+  set saved(v) { localStorage.setItem(K("saved"), JSON.stringify(v)); scheduleSync(); },
   get progress() { return JSON.parse(localStorage.getItem(K("progress")) || "{}"); },
-  set progress(v) { localStorage.setItem(K("progress"), JSON.stringify(v)); },
+  set progress(v) { localStorage.setItem(K("progress"), JSON.stringify(v)); scheduleSync(); },
   get follows() { return JSON.parse(localStorage.getItem(K("follows")) || "[]"); },
-  set follows(v) { localStorage.setItem(K("follows"), JSON.stringify(v)); },
+  set follows(v) { localStorage.setItem(K("follows"), JSON.stringify(v)); scheduleSync(); },
   get comments() { return JSON.parse(localStorage.getItem(K("comments")) || "{}"); },
-  set comments(v) { localStorage.setItem(K("comments"), JSON.stringify(v)); },
+  set comments(v) { localStorage.setItem(K("comments"), JSON.stringify(v)); scheduleSync(); },
 };
 
 /* Seeded community voices (test data). Real community needs a moderated backend. */
@@ -74,6 +74,7 @@ function hideComment(key) {
   const h = hiddenKeys();
   if (!h.includes(key)) h.push(key);
   localStorage.setItem(K("hidden"), JSON.stringify(h));
+  scheduleSync();
 }
 function unhideAll(msgId) {
   localStorage.setItem(K("hidden"), JSON.stringify(hiddenKeys().filter((k) => !k.startsWith(msgId + ":"))));
@@ -736,6 +737,7 @@ Promise.all([
   if (localStorage.getItem("pco.pendingPremium") === "1" && activeId()) {
     localStorage.setItem(K("premium"), "1");
     localStorage.removeItem("pco.pendingPremium");
+    scheduleSync();
   }
   updateOnline();
   ensureAvatar();
@@ -948,6 +950,150 @@ function paintAvatar() {
   b.style.cssText = `margin-left:8px;width:38px;height:38px;border-radius:50%;border:2px solid ${p ? p.color : "#8A7D68"};background:#201914;color:#F7F1E6;font-size:17px;font-weight:800`;
 }
 
+/* ---- Supabase accounts: real login, cloud-synced personal data ----
+   Email auth via Supabase (free tier). One row per user in pco_data (RLS:
+   owners only). localStorage stays the offline cache; cloud is the truth
+   across devices. Device profiles + PINs stay local-only by design. */
+let SB = null, SB_USER = null, syncTimer = null;
+const DATA_KEYS = ["favs", "saved", "progress", "follows", "comments", "premium", "hidden"];
+
+async function sbClient() {
+  if (SB) return SB;
+  let cfg;
+  try {
+    const r = await fetch("/api/config");
+    if (!r.ok) return null;
+    cfg = await r.json();
+  } catch { return null; }
+  try {
+    const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2.44.4");
+    SB = createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+    const { data } = await SB.auth.getSession();
+    SB_USER = data.session?.user || null;
+    SB.auth.onAuthStateChange((_ev, session) => {
+      SB_USER = session?.user || null;
+      paintAccount();
+    });
+    return SB;
+  } catch { return null; }
+}
+
+function collectLocal() {
+  const out = {};
+  for (const k of DATA_KEYS) {
+    try { out[k] = JSON.parse(localStorage.getItem(K(k)) || (k === "progress" ? "{}" : k === "comments" ? "{}" : "[]")); }
+    catch { out[k] = null; }
+  }
+  if (localStorage.getItem(K("premium")) === "1") out.premium = "1";
+  return out;
+}
+
+function applyCloud(data) {
+  for (const k of DATA_KEYS) {
+    if (data[k] === undefined || data[k] === null) continue;
+    localStorage.setItem(K(k), typeof data[k] === "string" ? data[k] : JSON.stringify(data[k]));
+  }
+}
+
+async function cloudRow() {
+  const { data, error } = await SB.from("pco_data").select("data").eq("user_id", SB_USER.id).maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+function scheduleSync() {
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(async () => {
+    if (!SB || !SB_USER) return;
+    try {
+      await SB.from("pco_data").upsert({ user_id: SB_USER.id, data: collectLocal(), updated_at: new Date().toISOString() });
+    } catch { /* offline — local copy remains truth until next sync */ }
+  }, 3000);
+}
+
+/** First sign-in on this device: cloud empty → upload local; else download. */
+async function afterAuth() {
+  paintAccount();
+  try {
+    const row = await cloudRow();
+    const local = collectLocal();
+    const localEmpty = DATA_KEYS.every((k) => {
+      const v = local[k];
+      return v === null || v === undefined || (Array.isArray(v) && !v.length) || (typeof v === "object" && !Array.isArray(v) && !Object.keys(v).length);
+    });
+    if (!row || localEmpty === false && Object.keys(row.data || {}).length === 0) {
+      await SB.from("pco_data").upsert({ user_id: SB_USER.id, data: local, updated_at: new Date().toISOString() });
+    } else {
+      applyCloud(row.data || {});
+    }
+  } catch { /* table missing? run the SQL in docs/SUPABASE.md */ }
+  renderPicker();
+}
+
+function paintAccount() {
+  let chip = document.getElementById("account-chip");
+  if (!SB_USER) { chip?.remove(); return; }
+  if (!chip) {
+    chip = el(`<button id="account-chip" aria-label="Account"></button>`);
+    chip.onclick = accountSheet;
+    document.querySelector(".nav").append(chip);
+  }
+  chip.textContent = "👤 " + (SB_USER.email || "account").split("@")[0];
+  chip.style.cssText = "margin-left:8px;background:var(--surface2);border:1px solid var(--line);color:var(--text);border-radius:999px;padding:8px 14px;font-size:14px";
+}
+
+function accountSheet() {
+  openSheet(`👤 ${SB_USER?.email || "Account"}`, `
+    <p style="color:var(--muted)">Signed in. Your favorites, progress, reflections, and subscription sync to any device with this login. Profiles + PINs stay on each device.</p>
+    <div class="rowbtns"><button class="btn primary" id="acc-sync">Sync now</button>
+    <button class="btn" id="acc-out">Sign out</button></div>
+    <div id="acc-msg" style="color:var(--muted);margin-top:10px"></div>`);
+  const d = document.getElementById("screen");
+  d.querySelector("#acc-sync").onclick = async () => {
+    d.querySelector("#acc-msg").textContent = "Syncing…";
+    try {
+      const row = await cloudRow();
+      if (row) applyCloud(row.data || {});
+      d.querySelector("#acc-msg").textContent = "Synced ✓";
+      render();
+    } catch { d.querySelector("#acc-msg").textContent = "Sync failed — offline?"; }
+  };
+  d.querySelector("#acc-out").onclick = async () => {
+    await SB.auth.signOut();
+    SB_USER = null;
+    paintAccount();
+    renderLanding();
+  };
+}
+
+async function authAction(mode) {
+  const email = document.getElementById("acc-email")?.value.trim();
+  const pw = document.getElementById("acc-pw")?.value || "";
+  const msg = document.getElementById("acc-msg");
+  if (!email?.includes("@") || pw.length < 6) {
+    if (msg) msg.textContent = "Enter an email and a 6+ character password.";
+    return;
+  }
+  if (msg) msg.textContent = "Connecting…";
+  try {
+    const sb = await sbClient();
+    if (!sb) throw new Error("offline");
+    const { data, error } = mode === "up"
+      ? await sb.auth.signUp({ email, password: pw })
+      : await sb.auth.signInWithPassword({ email, password: pw });
+    if (error) throw error;
+    SB_USER = data.user || data.session?.user || SB_USER;
+    if (!SB_USER) {
+      const { data: s2 } = await sb.auth.getSession();
+      SB_USER = s2.session?.user || null;
+    }
+    if (msg) msg.textContent = SB_USER ? "Signed in ✓" : "Check your email to confirm, then sign in.";
+    if (SB_USER) await afterAuth();
+  } catch (e) {
+    if (msg) msg.textContent = "Couldn't sign in: " + (e.message || "offline?");
+  }
+}
+
 /* ---- Landing + persistent session (Netflix-style: log in once, stay in) ---- */
 const isRemember = () => localStorage.getItem("pco.remember") !== "0";
 const savedSession = () => localStorage.getItem("pco.session") || "";
@@ -979,6 +1125,15 @@ function renderLanding() {
     </div>
     <label style="display:block;margin-top:14px;color:var(--muted);font-size:14px">
       <input type="checkbox" id="land-remember" ${isRemember() ? "checked" : ""}> Keep me signed in on this device</label>
+    <div class="detail" style="margin-top:22px;text-align:left">
+      <b>👤 Account (syncs across devices)</b>
+      <p style="color:var(--muted);font-size:14px">Optional. Without it, everything stays on this device only.</p>
+      <input id="acc-email" class="searchbar" type="email" placeholder="you@example.com" aria-label="Email">
+      <input id="acc-pw" class="searchbar" type="password" placeholder="Password (6+ characters)" aria-label="Password">
+      <div class="rowbtns"><button class="btn primary" id="acc-in">Sign in</button>
+      <button class="btn" id="acc-up">Create account</button></div>
+      <div id="acc-msg" style="color:var(--muted);font-size:14px;margin-top:8px"></div>
+    </div>
     <div class="chips" style="justify-content:center;margin-top:22px">
       <span class="amen">🎙 Messages</span><span class="amen">🎵 Music</span><span class="amen">🔴 Live</span>
     </div>
@@ -990,6 +1145,9 @@ function renderLanding() {
     if (!e.target.checked) localStorage.removeItem("pco.session");
   };
   w.querySelector("#land-go").onclick = renderPicker;
+  w.querySelector("#acc-in").onclick = () => authAction("in");
+  w.querySelector("#acc-up").onclick = () => authAction("up");
+  sbClient().then((sb) => { if (sb) paintAccount(); });
   window.scrollTo(0, 0);
 }
 

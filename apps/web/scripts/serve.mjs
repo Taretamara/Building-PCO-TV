@@ -76,6 +76,13 @@ const PORT = process.env.PORT || 5173;
 createServer(async (req, res) => {
   const url = new URL(req.url, "http://x");
 
+  // GET /api/config → public client config (anon key is public by design; RLS guards data)
+  if (req.method === "GET" && url.pathname === "/api/config") {
+    const u = process.env.SUPABASE_URL, k = process.env.SUPABASE_ANON_KEY;
+    if (!u || !k) return json(res, 503, { error: "accounts not configured" });
+    return json(res, 200, { supabaseUrl: u, supabaseAnonKey: k });
+  }
+
   // POST /api/paystack/initialize { email, amount } → { authorization_url, reference }
   if (req.method === "POST" && url.pathname === "/api/paystack/initialize") {
     const ip = clientIp(req);
