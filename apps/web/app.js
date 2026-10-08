@@ -235,7 +235,7 @@ function renderTabs() {
   nav.innerHTML = "";
   TABS.forEach((t) => {
     const b = el(`<button role="tab" aria-selected="${t === tab}">${t}</button>`);
-    b.onclick = () => { tab = t; render(); window.scrollTo(0, 0); };
+    b.onclick = () => { tab = t; track("tab_view", { tab: t }); render(); window.scrollTo(0, 0); };
     nav.append(b);
   });
 }
@@ -410,6 +410,7 @@ function Search(s) {
     if (artists.length) out.append(rail(`Artists (${artists.length})`, "",
       artists.map((a) => el(`<div class="card"><div class="thumb" data-art="${a.id}‖${a.name}‖1"></div><div class="meta"><b>${a.name}</b><div>${a.bio}</div></div></div>`))));
     if (!hits.length && !artists.length) out.append(el(`<div class="empty">No results for “${esc(query)}”. Try “faith” or “healing”.</div>`));
+    if (q.length > 2) track("search", { query: q.slice(0, 40), hits: hits.length });
     out.querySelectorAll("[data-open]").forEach((b) => (b.onclick = () => openDetail(b.dataset.open)));
     hydrateArtwork(out);
     wirePreviews(out);
@@ -458,7 +459,9 @@ function openDetail(id) {
   };
   d.querySelector("[data-fav]").onclick = () => {
     const f = store.favs;
-    store.favs = f.includes(id) ? f.filter((x) => x !== id) : [...f, id];
+    const adding = !f.includes(id);
+    store.favs = adding ? [...f, id] : f.filter((x) => x !== id);
+    if (adding) track("favorite_added", { id });
     openDetail(id);
   };
   d.querySelector("[data-save]").onclick = () => {
@@ -514,6 +517,7 @@ function openSubscribe() {
       });
       const out = await r.json();
       if (!r.ok) throw new Error(out.error || "checkout failed");
+      track("checkout_started", { plan: "monthly-ngn" });
       location.href = out.authorization_url;
     } catch (e) {
       msg.textContent = e.message === "payments not configured"
@@ -530,6 +534,7 @@ function playTrack(id, isVideo) {
   const bar = document.getElementById("player");
   bar.hidden = false;
   document.getElementById("player-title").textContent = title + (isVideo ? " (preview — test data)" : "");
+  track("playback_started", { id, kind: m ? "message" : "song" });
   if (m) {
     // Simulate progress so Continue Watching fills in
     const timer = setInterval(() => {
@@ -774,6 +779,7 @@ Promise.all([
   updateOnline();
   ensureAvatar();
   setupInstallButton();
+  initAnalytics();
   bootRoute();
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
@@ -992,6 +998,59 @@ function paintAvatar() {
   b.style.cssText = `margin-left:8px;width:38px;height:38px;border-radius:50%;border:2px solid ${p ? p.color : "#8A7D68"};background:#201914;color:#F7F1E6;font-size:17px;font-weight:800`;
 }
 
+/* ---- Analytics + error capture (PostHog, anonymous, offline-buffered) ----
+   Random device id only — never email. Events send when a POSTHOG_KEY is
+   configured (via /api/config); otherwise they stay local. Crashes go out
+   as $exception events the same way. */
+let PH = { key: null, host: "", queue: [] };
+function deviceId() {
+  let id = localStorage.getItem("pco.device");
+  if (!id) {
+    id = "d" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    localStorage.setItem("pco.device", id);
+  }
+  return id;
+}
+function flushAnalytics() {
+  if (!PH.key || !navigator.onLine || !PH.queue.length) return;
+  const batch = PH.queue.splice(0, 20);
+  fetch(`${PH.host}/capture/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      api_key: PH.key,
+      batch_key: deviceId(),
+      events: batch.map((e) => ({ ...e, distinct_id: deviceId(), properties: { ...(e.properties || {}), app: "pco-tv", device: "web" } })),
+    }),
+  }).catch(() => { PH.queue.unshift(...batch); });
+}
+function track(name, props) {
+  const e = { event: name, properties: props || {}, timestamp: new Date().toISOString() };
+  if (!PH.key) return; // unconfigured: no-op (nothing leaves the device)
+  PH.queue.push(e);
+  if (PH.queue.length > 50) PH.queue.shift();
+  if (navigator.onLine) flushAnalytics();
+  else {
+    try { localStorage.setItem("pco.analytics", JSON.stringify(PH.queue)); } catch { /* full */ }
+  }
+}
+window.addEventListener("online", flushAnalytics);
+window.addEventListener("error", (e) => track("$exception", { message: String(e.message || "error").slice(0, 200), source: String(e.filename || "").slice(-60) }));
+window.addEventListener("unhandledrejection", (e) => track("$exception", { message: String(e.reason?.message || e.reason || "rejection").slice(0, 200) }));
+
+async function initAnalytics() {
+  try {
+    const r = await fetch("/api/config");
+    if (!r.ok) return;
+    const cfg = await r.json();
+    if (!cfg.posthogKey) return;
+    PH.key = cfg.posthogKey;
+    PH.host = cfg.posthogHost || "https://us.i.posthog.com";
+    try { PH.queue = JSON.parse(localStorage.getItem("pco.analytics") || "[]"); } catch { PH.queue = []; }
+    track("app_open", { tab });
+  } catch { /* analytics optional */ }
+}
+
 /* ---- Supabase accounts: real login, cloud-synced personal data ----
    Email auth via Supabase (free tier). One row per user in pco_data (RLS:
    owners only). localStorage stays the offline cache; cloud is the truth
@@ -1165,7 +1224,7 @@ async function authAction(mode) {
       SB_USER = s2.session?.user || null;
     }
     if (msg) msg.textContent = SB_USER ? "Signed in ✓" : "Check your email to confirm, then sign in.";
-    if (SB_USER) await afterAuth();
+    if (SB_USER) { track(mode === "up" ? "signed_up" : "signed_in", {}); await afterAuth(); }
   } catch (e) {
     if (msg) msg.textContent = "Couldn't sign in: " + (e.message || "offline?");
   }

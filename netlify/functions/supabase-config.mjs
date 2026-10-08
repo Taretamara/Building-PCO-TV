@@ -5,5 +5,10 @@ export async function handler() {
   if (!u || !k) {
     return { statusCode: 503, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ error: "accounts not configured" }) };
   }
-  return { statusCode: 200, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ supabaseUrl: u, supabaseAnonKey: k }) };
+  return { statusCode: 200, headers: { "Content-Type": "application/json" }, body: JSON.stringify({
+    supabaseUrl: u,
+    supabaseAnonKey: k,
+    posthogKey: process.env.POSTHOG_KEY || null,
+    posthogHost: process.env.POSTHOG_HOST || "https://us.i.posthog.com",
+  }) };
 }

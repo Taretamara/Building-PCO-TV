@@ -80,7 +80,12 @@ createServer(async (req, res) => {
   if (req.method === "GET" && url.pathname === "/api/config") {
     const u = process.env.SUPABASE_URL, k = process.env.SUPABASE_ANON_KEY;
     if (!u || !k) return json(res, 503, { error: "accounts not configured" });
-    return json(res, 200, { supabaseUrl: u, supabaseAnonKey: k });
+    return json(res, 200, {
+      supabaseUrl: u,
+      supabaseAnonKey: k,
+      posthogKey: process.env.POSTHOG_KEY || null,
+      posthogHost: process.env.POSTHOG_HOST || "https://us.i.posthog.com",
+    });
   }
 
   // GET /api/email-check?domain=X → { valid } (MX lookup; catches fake domains)

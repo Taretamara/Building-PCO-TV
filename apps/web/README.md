@@ -16,6 +16,10 @@ pnpm --filter @pco/web dev
 - `sw.js` — caches the app shell + seed for offline use.
 - `scripts/serve.mjs` — zero-dependency static server (service workers require http, not file://) + Paystack init/verify endpoints (secret key server-side only).
 
+## Analytics + errors (PostHog, optional, anonymous)
+- App sends `app_open, tab_view, playback_started, search, favorite_added, checkout_started, signed_up/in` + `$exception` crashes — random device id only, never email. Offline events buffer (50 max) and flush on reconnect.
+- Nothing leaves the device until you set `POSTHOG_KEY` (free: app.posthog.com → new project → Project API key): local `.env` + Netlify env vars, then redeploy. Without it, tracking is a silent no-op.
+
 ## Deploy (free, Netlify)
 1. Push to GitHub (done — `netlify.toml` is in the repo root).
 2. Go to **app.netlify.com** → Add new site → **Import an existing project** → connect GitHub → `Taretamara/Building-PCO-TV`.
