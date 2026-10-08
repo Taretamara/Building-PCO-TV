@@ -61,13 +61,39 @@ function amenCount(c) {
   return Array.isArray(c.amens) ? c.amens.length : c.amens;
 }
 
+/* Demo-grade moderation: masked words + personal report/hide.
+   A shared backend with approve/report queues is still the real fix (post-MVP). */
+const BLOCKED = ["damn", "hell", "stupid", "idiot", "hate you", "http://", "https://", "www."];
+function mask(text) {
+  let s = String(text ?? "");
+  for (const w of BLOCKED) s = s.replace(new RegExp(w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"), (m) => "•".repeat(m.length));
+  return s;
+}
+function hiddenKeys() { return JSON.parse(localStorage.getItem(K("hidden")) || "[]"); }
+function hideComment(key) {
+  const h = hiddenKeys();
+  if (!h.includes(key)) h.push(key);
+  localStorage.setItem(K("hidden"), JSON.stringify(h));
+}
+function unhideAll(msgId) {
+  localStorage.setItem(K("hidden"), JSON.stringify(hiddenKeys().filter((k) => !k.startsWith(msgId + ":"))));
+}
+
 function commentListHtml(msgId) {
-  const list = getComments(msgId);
-  if (!list.length) return `<div class="empty">No reflections yet — share the first one below. What did you learn?</div>`;
-  return list.map((c, i) => `
+  const hidden = hiddenKeys();
+  const mine = (store.comments[msgId] || []).map((c, j) => ({ ...c, mine: true, key: `${msgId}:u${j}`, idx: j }));
+  const seeded = DEMO_COMMENTS.filter((c) => c.msg === msgId).map((c, j) => ({ ...c, key: `${msgId}:s${j}` }));
+  const total = mine.length + seeded.length;
+  const list = [...mine, ...seeded].filter((c) => !hidden.includes(c.key));
+  const hiddenCount = total - list.length;
+  const hiddenNote = hiddenCount > 0
+    ? `<div style="margin:8px 0"><button class="amen" data-unhide="${msgId}">${hiddenCount} hidden by you · Undo</button></div>` : "";
+  if (!list.length && !hiddenCount) return `<div class="empty">No reflections yet — share the first one below. What did you learn?</div>`;
+  return hiddenNote + list.map((c) => `
     <div class="comment"><b>${esc(c.name)}</b>${c.mine ? ` <small>(you)</small>` : ""}
-    <p>${esc(c.text)}</p>
-    <button class="amen" data-amen="${msgId}:${c.mine ? "u" + i : "s" + i}">🙏 Amen · ${amenCount(c)}</button></div>`).join("");
+    <p>${esc(mask(c.text))}</p>
+    <button class="amen" data-amen="${c.key}">🙏 Amen · ${amenCount(c)}</button>
+    <button class="amen" data-report="${c.key}">Report</button></div>`).join("");
 }
 
 function wireComments(scope, msgId, rerender) {
@@ -76,12 +102,20 @@ function wireComments(scope, msgId, rerender) {
     if (ref.startsWith("u")) toggleAmen(mid, +ref.slice(1));
     rerender();
   }));
+  scope.querySelectorAll("[data-report]").forEach((b) => (b.onclick = () => {
+    hideComment(b.dataset.report);
+    rerender();
+  }));
+  scope.querySelectorAll("[data-unhide]").forEach((b) => (b.onclick = () => {
+    unhideAll(b.dataset.unhide);
+    rerender();
+  }));
   const form = scope.querySelector("[data-cform]");
   if (form) form.onsubmit = (e) => {
     e.preventDefault();
     const input = scope.querySelector("[data-cinput]");
-    if (!input.value.trim()) return;
-    postComment(msgId, input.value);
+    if (!input.value.trim().slice(0, 500)) return;
+    postComment(msgId, input.value.trim().slice(0, 500));
     rerender();
   };
 }
@@ -320,7 +354,7 @@ function Community(s) {
   if (!items.length) wrap.append(el(`<div class="empty">No reflections yet. Finish any message — you'll be invited to share what you learnt.</div>`));
   items.slice(0, 20).forEach((c) => {
     const m = DB.messages.find((x) => x.id === c.msgId);
-    wrap.append(el(`<div class="comment"><b>${esc(c.name)}</b> <small>on “${esc(m?.title || c.msgId)}”</small><p>${esc(c.text)}</p>
+    wrap.append(el(`<div class="comment"><b>${esc(c.name)}</b> <small>on “${esc(m?.title || c.msgId)}”</small><p>${esc(mask(c.text))}</p>
       <div class="rowbtns"><button class="btn" data-open="${c.msgId}">Watch & join in</button></div></div>`));
   });
   s.append(wrap);
@@ -714,12 +748,193 @@ Promise.all([
     `<div class="empty" style="margin-top:14px">Couldn't load test data. Serve over http: <b>node scripts/serve.mjs</b> then open http://localhost:5173/index.html</div>`;
 });
 
+/* ---- Profile PIN + vault encryption (device-grade protection) ----
+   Optional 4-digit PIN per profile. Setting a PIN encrypts that profile's
+   data (favorites, progress, comments, premium) with AES-GCM-256, the key
+   derived from the PIN via PBKDF2. Plaintext is wiped; the PIN is never
+   stored — only a verifier hash. Forget the PIN = data unrecoverable. */
+const enc = new TextEncoder(), dec = new TextDecoder();
+const b64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf)));
+const unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+const rand = (n) => crypto.getRandomValues(new Uint8Array(n));
+
+function pinMeta() { return JSON.parse(localStorage.getItem("pco.pinMeta") || "{}"); }
+function savePinMeta(m) { localStorage.setItem("pco.pinMeta", JSON.stringify(m)); }
+const hasPin = (pid) => !!pinMeta()[pid] || !!localStorage.getItem(`pco.${pid}.vault`);
+
+async function deriveKey(pin, salt) {
+  const base = await crypto.subtle.importKey("raw", enc.encode(`pco:${pin}`), "PBKDF2", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: 120000, hash: "SHA-256" }, base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+}
+async function verifier(pin, salt) {
+  const k = await deriveKey(pin, salt);
+  const sig = await crypto.subtle.encrypt({ name: "AES-GCM", iv: new Uint8Array(12) }, k, enc.encode("pco-pin-ok"));
+  return b64(sig);
+}
+
+/** Set a PIN: encrypts current profile data into the vault, wipes plaintext. */
+async function setPin(pid, pin) {
+  const data = {};
+  for (let i = localStorage.length - 1; i >= 0; i--) {
+    const k = localStorage.key(i);
+    if (k?.startsWith(`pco.${pid}.`)) { data[k] = localStorage.getItem(k); localStorage.removeItem(k); }
+  }
+  const salt = rand(16), iv = rand(12);
+  const key = await deriveKey(pin, salt);
+  const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, enc.encode(JSON.stringify(data)));
+  localStorage.setItem(`pco.${pid}.vault`, JSON.stringify({ salt: b64(salt), iv: b64(iv), data: b64(ct) }));
+  localStorage.setItem(`pco.${pid}.verify`, JSON.stringify({ salt: b64(salt), verify: await verifier(pin, salt) }));
+  const meta = pinMeta(); meta[pid] = true; savePinMeta(meta);
+}
+
+/** Check a PIN without touching data. Throws on wrong PIN. */
+async function verifyPin(pid, pin) {
+  const raw = localStorage.getItem(`pco.${pid}.verify`);
+  if (!raw) throw new Error("wrong pin");
+  const v = JSON.parse(raw);
+  if ((await verifier(pin, unb64(v.salt))) !== v.verify) throw new Error("wrong pin");
+}
+
+/** Unlock attempt: wrong PIN throws, data untouched. */
+async function unlockPin(pid, pin) {
+  await verifyPin(pid, pin);
+  const raw = localStorage.getItem(`pco.${pid}.vault`);
+  if (!raw) return;
+  const v = JSON.parse(raw);
+  const key = await deriveKey(pin, unb64(v.salt));
+  const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: unb64(v.iv) }, key, unb64(v.data));
+  const data = JSON.parse(dec.decode(pt));
+  for (const [k, val] of Object.entries(data)) localStorage.setItem(k, val);
+  localStorage.removeItem(`pco.${pid}.vault`);
+}
+
+/** Remove PIN (data stays readable on this device afterwards). */
+async function removePin(pid, pin) {
+  await unlockPin(pid, pin);
+  localStorage.removeItem(`pco.${pid}.verify`);
+  const meta = pinMeta(); delete meta[pid]; savePinMeta(meta);
+}
+
+/* Session PINs live in memory only — never localStorage. Enables silent
+   re-lock when switching profiles; a reload forgets them (safe default). */
+const sessionPins = {};
+
+async function setActive(pid) {
+  const prev = activeId();
+  if (prev && prev !== pid && sessionPins[prev]) {
+    await setPin(prev, sessionPins[prev]);
+    delete sessionPins[prev];
+  }
+  localStorage.setItem("pco.activeProfile", pid);
+  tab = "Home";
+  paintAvatar();
+  render();
+  window.scrollTo(0, 0);
+}
+
+async function enterProfile(pid) {
+  if (pid === activeId() && !localStorage.getItem(`pco.${pid}.vault`)) {
+    tab = "Home"; paintAvatar(); render(); window.scrollTo(0, 0); return;
+  }
+  if (!hasPin(pid)) { await setActive(pid); return; }
+  const name = profiles().find((p) => p.id === pid)?.name || pid;
+  askPin(`Profile “${name}” is locked`, async (pin) => {
+    await unlockPin(pid, pin);
+    sessionPins[pid] = pin;
+    await setActive(pid);
+  });
+}
+
+async function goPicker() {
+  const prev = activeId();
+  if (prev && sessionPins[prev]) {
+    await setPin(prev, sessionPins[prev]);
+    delete sessionPins[prev];
+  }
+  renderPicker();
+}
+
+function managePin(pid) {
+  const name = profiles().find((p) => p.id === pid)?.name || pid;
+  if (!hasPin(pid)) {
+    askPin(`Set a PIN for ${name}`, async (first) => {
+      askPin(`Repeat the PIN for ${name}`, async (second) => {
+        if (first !== second) { renderPicker(); return; }
+        if (!crypto.subtle) { renderPicker(); return; }
+        await setPin(pid, first);
+        renderPicker();
+      });
+    });
+    return;
+  }
+  askPin(`Current PIN for ${name}`, async (pin) => {
+    await verifyPin(pid, pin);
+    openSheet(`PIN · ${name}`, `<div class="rowbtns">
+      <button class="btn" id="pin-change">Change PIN</button>
+      <button class="btn" id="pin-remove">Remove PIN (data stays readable)</button></div>`);
+    const d = document.getElementById("screen");
+    d.querySelector("#pin-change").onclick = () => {
+      askPin(`New PIN for ${name}`, async (first) => {
+        askPin(`Repeat the PIN for ${name}`, async (second) => {
+          if (first !== second) { renderPicker(); return; }
+          await unlockPin(pid, pin);
+          await setPin(pid, first);
+          sessionPins[pid] = first;
+          renderPicker();
+        });
+      });
+    };
+    d.querySelector("#pin-remove").onclick = async () => {
+      await removePin(pid, pin);
+      renderPicker();
+    };
+  });
+}
+
+function pinPadHtml(title, sub) {
+  return `<div style="text-align:center;padding:30px 0"><div class="kicker">${title}</div>
+    <h1 style="font-size:28px">Enter PIN</h1>
+    <p style="color:var(--muted)">${sub}</p>
+    <div id="pin-dots" style="font-size:30px;letter-spacing:12px;margin:10px 0">○○○○</div>
+    <div class="pinpad">${[1, 2, 3, 4, 5, 6, 7, 8, 9, "", 0, "⌫"].map((d) =>
+      d === "" ? `<span></span>` : `<button data-pin="${d}">${d}</button>`).join("")}</div>
+    <div class="rowbtns" style="justify-content:center"><button class="btn" id="pin-cancel">Cancel</button></div>
+    <div id="pin-err" style="color:var(--live);margin-top:8px"></div></div>`;
+}
+
+function wirePinPad(scope, onComplete) {
+  let entry = "";
+  const dots = scope.querySelector("#pin-dots");
+  scope.querySelector("#pin-cancel").onclick = goPicker;
+  scope.querySelectorAll("[data-pin]").forEach((b) => (b.onclick = async () => {
+    if (b.dataset.pin === "⌫") entry = entry.slice(0, -1);
+    else if (entry.length < 4) entry += b.dataset.pin;
+    dots.textContent = "●".repeat(entry.length) + "○".repeat(4 - entry.length);
+    if (entry.length === 4) {
+      const pin = entry; entry = "";
+      dots.textContent = "○○○○";
+      await onComplete(pin).catch(() => {
+        scope.querySelector("#pin-err").textContent = "Wrong PIN — try again.";
+      });
+    }
+  }));
+}
+
+function askPin(sub, onComplete) {
+  const s = document.getElementById("screen");
+  s.innerHTML = "";
+  const w = el(`<div>${pinPadHtml("PCO TV · PROFILE LOCK", sub)}</div>`);
+  s.append(w);
+  wirePinPad(w, onComplete);
+  window.scrollTo(0, 0);
+}
+
 /* ---- Profiles (device-only demo login, PRD §19 family experience) ---- */
 
 function ensureAvatar() {
   if (document.getElementById("profile-btn")) return;
   const b = el(`<button id="profile-btn" aria-label="Switch profile"></button>`);
-  b.onclick = renderPicker;
+  b.onclick = goPicker;
   document.querySelector(".nav").insertBefore(b, document.getElementById("install"));
   paintAvatar();
 }
@@ -743,16 +958,15 @@ function renderPicker() {
   s.append(wrap);
   const list = wrap.querySelector("#plist");
   profiles().forEach((p) => {
+    const locked = hasPin(p.id);
+    const cell = el(`<div style="display:flex;flex-direction:column;gap:8px;align-items:center"></div>`);
     const t = el(`<button style="background:var(--surface);border:2px solid ${p.color};border-radius:16px;padding:22px 26px;color:var(--text);font-size:17px;min-width:130px">
-      <div style="font-size:34px;font-weight:800;color:${p.color}">${p.name[0]}</div>${p.name}</button>`);
-    t.onclick = () => {
-      localStorage.setItem("pco.activeProfile", p.id);
-      tab = "Home";
-      paintAvatar();
-      render();
-      window.scrollTo(0, 0);
-    };
-    list.append(t);
+      <div style="font-size:34px;font-weight:800;color:${p.color}">${p.name[0]}</div>${p.name} ${locked ? "🔒" : ""}</button>`);
+    t.onclick = () => enterProfile(p.id);
+    const gear = el(`<button class="btn" style="font-size:13px;padding:6px 12px">${locked ? "PIN ⚙" : "Set PIN 🔓"}</button>`);
+    gear.onclick = (e) => { e.stopPropagation(); managePin(p.id); };
+    cell.append(t, gear);
+    list.append(cell);
   });
   window.scrollTo(0, 0);
 }

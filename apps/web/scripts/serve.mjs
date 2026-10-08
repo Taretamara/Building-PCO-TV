@@ -27,6 +27,22 @@ try {
 
 const PAYSTACK_BASE = process.env.PAYSTACK_BASE_URL || "https://api.paystack.co";
 
+/* Rate limits (per IP, sliding window): general API 30/min, checkout starts 5/hour.
+   Stops spam/abuse of the key-backed endpoints. Tune via env. */
+const RATE = { windowMs: 60000, max: 30, initMax: 5, initWindowMs: 3600000 };
+const hits = new Map(); // ip -> { times: number[] }
+const initHits = new Map(); // ip -> { times: number[] }
+function limited(map, ip, max, windowMs) {
+  const now = Date.now();
+  const rec = map.get(ip) || { times: [] };
+  rec.times = rec.times.filter((t) => now - t < windowMs);
+  if (rec.times.length >= max) return true;
+  rec.times.push(now);
+  map.set(ip, rec);
+  return false;
+}
+const clientIp = (req) => (req.headers["x-forwarded-for"] || req.socket.remoteAddress || "local").split(",")[0].trim();
+
 function json(res, code, obj) {
   res.writeHead(code, { "Content-Type": "application/json" }).end(JSON.stringify(obj));
 }
@@ -62,6 +78,9 @@ createServer(async (req, res) => {
 
   // POST /api/paystack/initialize { email, amount } → { authorization_url, reference }
   if (req.method === "POST" && url.pathname === "/api/paystack/initialize") {
+    const ip = clientIp(req);
+    if (limited(hits, ip, RATE.max, RATE.windowMs)) return json(res, 429, { error: "too many requests" });
+    if (limited(initHits, ip, RATE.initMax, RATE.initWindowMs)) return json(res, 429, { error: "checkout limit reached, try later" });
     const secret = process.env.PAYSTACK_SECRET_KEY;
     if (!secret) return json(res, 503, { error: "payments not configured" });
     let body;
@@ -82,6 +101,7 @@ createServer(async (req, res) => {
 
   // GET /api/paystack/verify?reference=X → { status, amount }
   if (req.method === "GET" && url.pathname === "/api/paystack/verify") {
+    if (limited(hits, clientIp(req), RATE.max, RATE.windowMs)) return json(res, 429, { error: "too many requests" });
     const secret = process.env.PAYSTACK_SECRET_KEY;
     if (!secret) return json(res, 503, { error: "payments not configured" });
     const ref = url.searchParams.get("reference");

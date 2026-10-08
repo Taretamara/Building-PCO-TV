@@ -8,8 +8,21 @@ const out = (statusCode, obj) => ({
   body: JSON.stringify(obj),
 });
 
+/* Best-effort per-instance rate limit (serverless instances don't share memory;
+   full edge limiting needs Netlify Edge Functions / paid tier — noted in README). */
+const bucketMin = [], bucketHour = [];
+function overLimit(bucket, max, windowMs) {
+  const now = Date.now();
+  while (bucket.length && now - bucket[0] > windowMs) bucket.shift();
+  if (bucket.length >= max) return true;
+  bucket.push(now);
+  return false;
+}
+
 export async function handler(event) {
   if (event.httpMethod !== "POST") return out(405, { error: "method not allowed" });
+  if (overLimit(bucketMin, 30, 60000)) return out(429, { error: "too many requests" });
+  if (overLimit(bucketHour, 5, 3600000)) return out(429, { error: "checkout limit reached, try later" });
   const secret = process.env.PAYSTACK_SECRET_KEY;
   if (!secret) return out(503, { error: "payments not configured" });
   let body;
