@@ -23,6 +23,12 @@
   status = 200
   force = true
 
+[[redirects]]
+  from = "/api/email-check"
+  to = "/.netlify/functions/email-check"
+  status = 200
+  force = true
+
 # Service worker must never be cached or updates won't reach browsers
 [[headers]]
   for = "/sw.js"

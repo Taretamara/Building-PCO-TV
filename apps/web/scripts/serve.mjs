@@ -83,6 +83,18 @@ createServer(async (req, res) => {
     return json(res, 200, { supabaseUrl: u, supabaseAnonKey: k });
   }
 
+  // GET /api/email-check?domain=X → { valid } (MX lookup; catches fake domains)
+  if (req.method === "GET" && url.pathname === "/api/email-check") {
+    if (limited(hits, clientIp(req), RATE.max, RATE.windowMs)) return json(res, 429, { error: "too many requests" });
+    const domain = (url.searchParams.get("domain") || "").trim().toLowerCase();
+    if (!/^[a-z0-9.-]+\.[a-z]{2,}$/.test(domain)) return json(res, 200, { valid: false });
+    try {
+      const { resolveMx } = await import("node:dns/promises");
+      const mx = await resolveMx(domain);
+      return json(res, 200, { valid: mx.length > 0 });
+    } catch { return json(res, 200, { valid: false }); }
+  }
+
   // POST /api/paystack/initialize { email, amount } → { authorization_url, reference }
   if (req.method === "POST" && url.pathname === "/api/paystack/initialize") {
     const ip = clientIp(req);

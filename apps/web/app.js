@@ -1107,6 +1107,19 @@ async function authAction(mode) {
     return;
   }
   if (msg) msg.textContent = "Connecting…";
+  if (mode === "up") {
+    // Reject fake/typo domains before creating the account (MX lookup).
+    // Note: a real domain with a made-up name (x@gmail.com) still passes —
+    // only a confirmation email can catch those.
+    try {
+      const domain = email.split("@")[1].toLowerCase();
+      const chk = await (await fetch(`/api/email-check?domain=${encodeURIComponent(domain)}`)).json();
+      if (!chk.valid) {
+        if (msg) msg.textContent = "That email domain doesn't accept mail — check for typos.";
+        return;
+      }
+    } catch { /* offline — let Supabase decide */ }
+  }
   try {
     const sb = await sbClient();
     if (!sb) throw new Error("offline");
