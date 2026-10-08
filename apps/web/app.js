@@ -740,8 +740,8 @@ Promise.all([
   updateOnline();
   ensureAvatar();
   setupInstallButton();
-  if (!activeId()) renderPicker();
-  else render();
+  bootRoute();
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 }).catch(() => {
   document.getElementById("screen").innerHTML =
@@ -821,11 +821,12 @@ const sessionPins = {};
 
 async function setActive(pid) {
   const prev = activeId();
-  if (prev && prev !== pid && sessionPins[prev]) {
+  if (!isRemember() && prev && prev !== pid && sessionPins[prev]) {
     await setPin(prev, sessionPins[prev]);
     delete sessionPins[prev];
   }
   localStorage.setItem("pco.activeProfile", pid);
+  if (isRemember()) localStorage.setItem("pco.session", pid);
   tab = "Home";
   paintAvatar();
   render();
@@ -847,7 +848,7 @@ async function enterProfile(pid) {
 
 async function goPicker() {
   const prev = activeId();
-  if (prev && sessionPins[prev]) {
+  if (!isRemember() && prev && sessionPins[prev]) {
     await setPin(prev, sessionPins[prev]);
     delete sessionPins[prev];
   }
@@ -947,6 +948,64 @@ function paintAvatar() {
   b.style.cssText = `margin-left:8px;width:38px;height:38px;border-radius:50%;border:2px solid ${p ? p.color : "#8A7D68"};background:#201914;color:#F7F1E6;font-size:17px;font-weight:800`;
 }
 
+/* ---- Landing + persistent session (Netflix-style: log in once, stay in) ---- */
+const isRemember = () => localStorage.getItem("pco.remember") !== "0";
+const savedSession = () => localStorage.getItem("pco.session") || "";
+
+function bootRoute() {
+  const sid = savedSession();
+  const ok = sid && profiles().some((p) => p.id === sid) &&
+    !localStorage.getItem(`pco.${sid}.vault`);
+  if (ok) {
+    localStorage.setItem("pco.activeProfile", sid);
+    tab = "Home";
+    paintAvatar();
+    render();
+  } else {
+    renderLanding();
+  }
+}
+
+function renderLanding() {
+  stopPreview();
+  const s = document.getElementById("screen");
+  s.innerHTML = "";
+  const w = el(`<div style="text-align:center;padding:48px 0 30px;max-width:640px;margin:0 auto">
+    <div class="logo" style="font-size:34px">PCO <span>TV</span></div>
+    <h1 style="font-size:clamp(30px,6vw,46px);margin:14px 0 6px">Turn on. Find something meaningful. Watch.</h1>
+    <p style="color:var(--muted);font-size:17px">Pastor Chris messages · LoveWorld music · Live programming — at home on your TV, phone, and tablet.</p>
+    <div class="rowbtns" style="justify-content:center;margin-top:18px">
+      <button class="btn primary" id="land-go" style="font-size:17px;padding:14px 34px">Sign In</button>
+    </div>
+    <label style="display:block;margin-top:14px;color:var(--muted);font-size:14px">
+      <input type="checkbox" id="land-remember" ${isRemember() ? "checked" : ""}> Keep me signed in on this device</label>
+    <div class="chips" style="justify-content:center;margin-top:22px">
+      <span class="amen">🎙 Messages</span><span class="amen">🎵 Music</span><span class="amen">🔴 Live</span>
+    </div>
+    <p style="color:var(--faint);font-size:12px;margin-top:22px">Demo build · test data · profiles + PINs live on this device only.</p>
+  </div>`);
+  s.append(w);
+  w.querySelector("#land-remember").onchange = (e) => {
+    localStorage.setItem("pco.remember", e.target.checked ? "1" : "0");
+    if (!e.target.checked) localStorage.removeItem("pco.session");
+  };
+  w.querySelector("#land-go").onclick = renderPicker;
+  window.scrollTo(0, 0);
+}
+
+async function signOut() {
+  const prev = activeId();
+  if (prev && sessionPins[prev]) {
+    await setPin(prev, sessionPins[prev]);
+    delete sessionPins[prev];
+  }
+  localStorage.removeItem("pco.session");
+  localStorage.removeItem("pco.activeProfile");
+  tab = "Home";
+  paintAvatar();
+  renderLanding();
+}
+
 function renderPicker() {
   stopPreview();
   const s = document.getElementById("screen");
@@ -968,5 +1027,11 @@ function renderPicker() {
     cell.append(t, gear);
     list.append(cell);
   });
+  if (savedSession()) {
+    const out = el(`<div class="rowbtns" style="justify-content:center;margin-top:26px">
+      <button class="btn" id="signout">Sign out (log in again next visit)</button></div>`);
+    wrap.append(out);
+    out.querySelector("#signout").onclick = signOut;
+  }
   window.scrollTo(0, 0);
 }
