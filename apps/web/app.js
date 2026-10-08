@@ -6,9 +6,13 @@ const DEFAULT_PROFILES = [
   { id: "dad", name: "Dad", color: "#7FD6B2" },
   { id: "kids", name: "Kids", color: "#E8AFAF" },
 ];
-function profiles() { return JSON.parse(localStorage.getItem("pco.profiles") || "null") || DEFAULT_PROFILES; }
+function profiles() { return JSON.parse(localStorage.getItem("pco.profiles") || "[]"); }
 function activeId() { return localStorage.getItem("pco.activeProfile") || ""; }
-function activeProfile() { return profiles().find((p) => p.id === activeId()); }
+function activeProfile() {
+  const p = profiles().find((x) => x.id === activeId());
+  if (!p && activeId()) localStorage.removeItem("pco.activeProfile");
+  return p;
+}
 const K = (k) => `pco.${activeId()}.${k}`;
 const store = {
   get favs() { return JSON.parse(localStorage.getItem(K("favs")) || "[]"); },
@@ -123,19 +127,47 @@ function wireComments(scope, msgId, rerender) {
 /** One-time migration: old device-wide data + premium flag move into the first profile. */
 function migrateLegacy() {
   if (localStorage.getItem("pco.profiles")) return;
-  localStorage.setItem("pco.profiles", JSON.stringify(DEFAULT_PROFILES));
-  // Returning device? Move old device-wide data into Tare and stay signed in.
-  // Fresh device? Leave no active profile so the picker shows.
+  // Returning device with old data? Keep the classic household tiles so nothing is lost.
+  // Fresh device? Start empty — the owner creates their own profiles below.
   let returning = false;
+  const stash = {};
   for (const k of ["favs", "saved", "progress", "follows", "premium"]) {
     const old = localStorage.getItem(`pco.${k}`);
-    if (old !== null) {
-      localStorage.setItem(`pco.tare.${k}`, old);
-      localStorage.removeItem(`pco.${k}`);
-      returning = true;
-    }
+    if (old !== null) { stash[k] = old; localStorage.removeItem(`pco.${k}`); returning = true; }
   }
-  if (returning) localStorage.setItem("pco.activeProfile", "tare");
+  if (returning) {
+    localStorage.setItem("pco.profiles", JSON.stringify(DEFAULT_PROFILES));
+    for (const [k, v] of Object.entries(stash)) localStorage.setItem(`pco.tare.${k}`, v);
+    localStorage.setItem("pco.activeProfile", "tare");
+  } else {
+    localStorage.setItem("pco.profiles", JSON.stringify([]));
+  }
+}
+const PROFILE_COLORS = ["#D9A441", "#7FB2E5", "#7FD6B2", "#E8AFAF", "#B79CFF", "#FF9C6B"];
+function addProfile(name) {
+  const clean = name.trim().slice(0, 20);
+  if (!clean) return null;
+  const list = profiles();
+  const id = "u" + Date.now().toString(36);
+  const used = new Set(list.map((p) => p.color));
+  const color = PROFILE_COLORS.find((c) => !used.has(c)) || PROFILE_COLORS[list.length % PROFILE_COLORS.length];
+  const rec = { id, name: clean, color, custom: true };
+  list.push(rec);
+  localStorage.setItem("pco.profiles", JSON.stringify(list));
+  return rec;
+}
+function deleteProfile(pid) {
+  localStorage.setItem("pco.profiles", JSON.stringify(profiles().filter((p) => p.id !== pid)));
+  for (let i = localStorage.length - 1; i >= 0; i--) {
+    const k = localStorage.key(i);
+    if (k?.startsWith(`pco.${pid}.`)) localStorage.removeItem(k);
+  }
+  const meta = pinMeta(); delete meta[pid]; savePinMeta(meta);
+  delete sessionPins[pid];
+  if (activeId() === pid) {
+    localStorage.removeItem("pco.activeProfile");
+    localStorage.removeItem("pco.session");
+  }
 }
 let DB = null, tab = "Home", topicFilter = "", query = "";
 let queue = { ids: [], i: 0 };
@@ -1170,19 +1202,39 @@ function renderPicker() {
   s.innerHTML = "";
   const wrap = el(`<div style="text-align:center;padding:40px 0"><div class="kicker">PCO TV · WHO'S WATCHING?</div>
     <h1 style="font-size:32px">Choose your profile</h1>
-    <p style="color:var(--muted)">Demo login — profiles live on this device only. Each person gets their own favorites, progress, and subscriptions.</p>
-    <div id="plist" style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:20px"></div></div>`);
+    <p style="color:var(--muted)">Profiles live on this device only. Each person gets their own favorites, progress, and subscriptions.</p>
+    <div id="plist" style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:20px"></div>
+    <div style="margin-top:22px"><input id="newprof" class="searchbar" style="max-width:280px;margin:0 auto" placeholder="New profile name…" aria-label="New profile name" maxlength="20">
+    <div class="rowbtns" style="justify-content:center"><button class="btn primary" id="addprof">＋ Add profile</button></div></div></div>`);
   s.append(wrap);
+  const add = () => {
+    const input = wrap.querySelector("#newprof");
+    const rec = addProfile(input.value);
+    if (rec) enterProfile(rec.id);
+    else input.focus();
+  };
+  wrap.querySelector("#addprof").onclick = add;
+  wrap.querySelector("#newprof").onkeydown = (e) => { if (e.key === "Enter") add(); };
   const list = wrap.querySelector("#plist");
   profiles().forEach((p) => {
     const locked = hasPin(p.id);
     const cell = el(`<div style="display:flex;flex-direction:column;gap:8px;align-items:center"></div>`);
     const t = el(`<button style="background:var(--surface);border:2px solid ${p.color};border-radius:16px;padding:22px 26px;color:var(--text);font-size:17px;min-width:130px">
-      <div style="font-size:34px;font-weight:800;color:${p.color}">${p.name[0]}</div>${p.name} ${locked ? "🔒" : ""}</button>`);
+      <div style="font-size:34px;font-weight:800;color:${p.color}">${esc(p.name[0])}</div>${esc(p.name)} ${locked ? "🔒" : ""}</button>`);
     t.onclick = () => enterProfile(p.id);
+    const row = el(`<div style="display:flex;gap:6px"></div>`);
     const gear = el(`<button class="btn" style="font-size:13px;padding:6px 12px">${locked ? "PIN ⚙" : "Set PIN 🔓"}</button>`);
     gear.onclick = (e) => { e.stopPropagation(); managePin(p.id); };
-    cell.append(t, gear);
+    const del = el(`<button class="btn" style="font-size:13px;padding:6px 12px" aria-label="Delete profile">✕</button>`);
+    del.onclick = (e) => {
+      e.stopPropagation();
+      if (confirm(`Delete ${p.name}'s profile and all their saved data on this device?`)) {
+        deleteProfile(p.id);
+        renderPicker();
+      }
+    };
+    row.append(gear, del);
+    cell.append(t, row);
     list.append(cell);
   });
   if (savedSession()) {
