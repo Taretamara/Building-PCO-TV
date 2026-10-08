@@ -30,8 +30,10 @@ Also set Authentication → URL Configuration → Site URL to the Netlify URL.
   by design; row-level security above is what protects user data.
 
 ## What syncs
-Favorites, saved, follows, progress, reflections, premium flag — per active
-device profile, debounced ~3s, offline-first (local copy always works).
-Device profiles + PIN vaults stay local-only by design.
+Favorites, saved, follows, progress, reflections, premium flag — stored per
+device profile inside one row (`{ profiles: { <pid>: {...} } }`), debounced
+~3s, offline-first (local copy always works). Sync needs an active profile;
+signing in from landing defers until you pick one. Profiles + PIN vaults
+stay local-only by design.
 Shared community (everyone sees everyone) still needs a comments table +
 moderation queue — post-MVP.

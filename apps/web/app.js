@@ -865,6 +865,16 @@ async function setActive(pid) {
   paintAvatar();
   render();
   window.scrollTo(0, 0);
+  if (pendingSync && SB_USER) {
+    pendingSync = false;
+    afterAuth().catch(() => {});
+  } else if (SB_USER && !cloudCache) {
+    // Fresh session on this profile: pull its slice if local is empty.
+    cloudLoad().then(() => {
+      const slice = cloudCache.profiles?.[pid];
+      if (slice && localEmpty()) { applyCloud(slice); render(); }
+    }).catch(() => {});
+  }
 }
 
 async function enterProfile(pid) {
@@ -1033,33 +1043,54 @@ async function cloudRow() {
   return data;
 }
 
+/* Cloud shape: { profiles: { <pid>: {...DATA_KEYS} } } — every device
+   profile gets its own slice, so switching profiles can never clobber
+   another profile's data. Sync only runs with an active profile. */
+let cloudCache = null, pendingSync = false;
+
+function localEmpty() {
+  const local = collectLocal();
+  return DATA_KEYS.every((k) => {
+    const v = local[k];
+    return v === null || v === undefined || (Array.isArray(v) && !v.length) || (typeof v === "object" && !Array.isArray(v) && !Object.keys(v).length);
+  });
+}
+
+async function cloudLoad() {
+  const row = await cloudRow();
+  cloudCache = (row && row.data) || { profiles: {} };
+  return cloudCache;
+}
+
+async function cloudSave() {
+  if (!SB || !SB_USER || !activeId()) return;
+  cloudCache = cloudCache || { profiles: {} };
+  cloudCache.profiles = cloudCache.profiles || {};
+  cloudCache.profiles[activeId()] = collectLocal();
+  await SB.from("pco_data").upsert({ user_id: SB_USER.id, data: cloudCache, updated_at: new Date().toISOString() });
+}
+
 function scheduleSync() {
   clearTimeout(syncTimer);
   syncTimer = setTimeout(async () => {
-    if (!SB || !SB_USER) return;
-    try {
-      await SB.from("pco_data").upsert({ user_id: SB_USER.id, data: collectLocal(), updated_at: new Date().toISOString() });
-    } catch { /* offline — local copy remains truth until next sync */ }
+    if (!SB || !SB_USER || !activeId()) return;
+    try { await cloudSave(); }
+    catch { /* offline — local copy remains truth until next sync */ }
   }, 3000);
 }
 
-/** First sign-in on this device: cloud empty → upload local; else download. */
+/** First sign-in: needs an active profile (deferred to picker otherwise). */
 async function afterAuth() {
   paintAccount();
+  if (!activeId()) { pendingSync = true; renderPicker(); return; }
   try {
-    const row = await cloudRow();
-    const local = collectLocal();
-    const localEmpty = DATA_KEYS.every((k) => {
-      const v = local[k];
-      return v === null || v === undefined || (Array.isArray(v) && !v.length) || (typeof v === "object" && !Array.isArray(v) && !Object.keys(v).length);
-    });
-    if (!row || localEmpty === false && Object.keys(row.data || {}).length === 0) {
-      await SB.from("pco_data").upsert({ user_id: SB_USER.id, data: local, updated_at: new Date().toISOString() });
-    } else {
-      applyCloud(row.data || {});
-    }
+    await cloudLoad();
+    const slice = cloudCache.profiles?.[activeId()];
+    if (!slice) await cloudSave();
+    else if (localEmpty()) applyCloud(slice);
+    else await cloudSave(); // both sides have data: device wins, merged up
   } catch { /* table missing? run the SQL in docs/SUPABASE.md */ }
-  renderPicker();
+  render();
 }
 
 function paintAccount() {
@@ -1084,8 +1115,9 @@ function accountSheet() {
   d.querySelector("#acc-sync").onclick = async () => {
     d.querySelector("#acc-msg").textContent = "Syncing…";
     try {
-      const row = await cloudRow();
-      if (row) applyCloud(row.data || {});
+      await cloudLoad();
+      const slice = cloudCache.profiles?.[activeId()];
+      if (slice) applyCloud(slice);
       d.querySelector("#acc-msg").textContent = "Synced ✓";
       render();
     } catch { d.querySelector("#acc-msg").textContent = "Sync failed — offline?"; }

@@ -1,5 +1,5 @@
 /* PCO TV service worker: app-shell caching + offline fallback (test data ships local). */
-const VERSION = "pco-v12";
+const VERSION = "pco-v13";
 const CORE = ["./index.html", "./styles.css", "./app.js", "./manifest.webmanifest", "./data/seed.json", "./media/manifest.json"];
 
 self.addEventListener("install", (e) => {
