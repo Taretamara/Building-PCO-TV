@@ -1237,7 +1237,6 @@ function paintAccount() {
     return;
   }
   if (!chip) {
-  if (!chip) {
     chip = el(`<button id="account-chip" aria-label="Account"></button>`);
     chip.onclick = accountSheet;
     document.querySelector(".nav").append(chip);
