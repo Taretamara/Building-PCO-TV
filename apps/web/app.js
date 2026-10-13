@@ -725,6 +725,12 @@ window.addEventListener("beforeinstallprompt", (e) => {
   deferredPrompt = e;
 });
 
+function isInstalled() {
+  return window.matchMedia("(display-mode: standalone)").matches ||
+    window.matchMedia("(display-mode: fullscreen)").matches ||
+    window.navigator.standalone === true; // iOS home-screen apps
+}
+
 function installSteps() {
   const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
   const android = /android/i.test(navigator.userAgent);
@@ -746,13 +752,14 @@ function openInstallGuide() {
 
 function setupInstallButton() {
   const b = document.getElementById("install");
+  if (isInstalled()) { b.hidden = true; return; }
   b.hidden = false;
   b.onclick = openInstallGuide;
 }
 
 function installBanner() {
   if (localStorage.getItem("pco.installDismissed") === "1") return null;
-  if (window.matchMedia("(display-mode: standalone)").matches) return null;
+  if (isInstalled()) return null;
   const bar = el(`<div class="install-banner"><div><b>📲 Get the PCO TV app</b><div>Icon, fullscreen, works offline — free.</div></div>
     <div class="rowbtns"><button class="btn primary" id="ib-go">Install</button><button class="btn" id="ib-no">Later</button></div></div>`);
   bar.querySelector("#ib-go").onclick = openInstallGuide;
