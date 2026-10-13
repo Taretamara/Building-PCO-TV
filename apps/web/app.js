@@ -1225,7 +1225,18 @@ async function afterAuth() {
 
 function paintAccount() {
   let chip = document.getElementById("account-chip");
-  if (!SB_USER) { chip?.remove(); return; }
+  document.getElementById("signin-btn")?.remove();
+  if (!SB_USER) {
+    chip?.remove();
+    if (!document.getElementById("signin-btn")) {
+      const b = el(`<button id="signin-btn">Sign In</button>`);
+      b.onclick = renderLanding;
+      b.style.cssText = "margin-left:8px;background:var(--gold);border:0;border-radius:10px;padding:9px 14px;font-weight:700;color:#1a1408";
+      document.querySelector(".nav").append(b);
+    }
+    return;
+  }
+  if (!chip) {
   if (!chip) {
     chip = el(`<button id="account-chip" aria-label="Account"></button>`);
     chip.onclick = accountSheet;
@@ -1315,7 +1326,7 @@ function bootRoute() {
     paintAvatar();
     render();
   } else {
-    renderLanding();
+    browseAsGuest(); // straight into content — no gate before browsing
   }
 }
 
