@@ -527,7 +527,63 @@ function openSubscribe() {
   };
 }
 
+/* Guest browsing: a device-local "Guest" profile keeps namespacing sane
+   until signup. On signup the guest's data merges into the chosen profile. */
+function ensureGuest() {
+  const list = profiles();
+  if (!list.some((p) => p.id === "guest")) {
+    list.push({ id: "guest", name: "Guest", color: "#8A7D68", guest: true });
+    localStorage.setItem("pco.profiles", JSON.stringify(list));
+  }
+}
+function browseAsGuest() {
+  ensureGuest();
+  localStorage.setItem("pco.activeProfile", "guest");
+  tab = "Home";
+  paintAvatar();
+  render();
+  window.scrollTo(0, 0);
+}
+function mergeGuestInto(pid) {
+  if (pid === "guest") return;
+  const get = (k, fb) => { try { return JSON.parse(localStorage.getItem(`pco.${pid}.${k}`) ?? fb); } catch { return JSON.parse(fb); } };
+  const gget = (k, fb) => { try { return JSON.parse(localStorage.getItem(`pco.guest.${k}`) ?? fb); } catch { return JSON.parse(fb); } };
+  for (const k of ["favs", "saved", "follows"]) {
+    const union = [...get(k, "[]"), ...gget(k, "[]").filter((x) => !get(k, "[]").includes(x))];
+    localStorage.setItem(`pco.${pid}.${k}`, JSON.stringify(union));
+  }
+  for (const k of ["progress", "comments"]) {
+    localStorage.setItem(`pco.${pid}.${k}`, JSON.stringify({ ...get(k, "{}"), ...gget(k, "{}") }));
+  }
+  if (localStorage.getItem("pco.guest.premium") === "1") localStorage.setItem(`pco.${pid}.premium`, "1");
+  for (let i = localStorage.length - 1; i >= 0; i--) {
+    const k = localStorage.key(i);
+    if (k?.startsWith("pco.guest.")) localStorage.removeItem(k);
+  }
+  localStorage.setItem("pco.profiles", JSON.stringify(profiles().filter((p) => p.id !== "guest")));
+}
+
+/* Signup gate on play: browsing is free, watching needs an account. */
+let pendingPlay = null;
+function openAuthGate() {
+  openSheet("🔑 Create a free account to watch", `
+    <p style="color:var(--muted)">Browsing stays free. One free account unlocks playback on all your devices.</p>
+    <input id="acc-email" class="searchbar" type="email" placeholder="you@example.com" aria-label="Email">
+    <input id="acc-pw" class="searchbar" type="password" placeholder="Password (6+ characters)" aria-label="Password">
+    <div class="rowbtns"><button class="btn primary" id="gate-up">Create account</button>
+    <button class="btn" id="gate-in">I have an account</button></div>
+    <div id="acc-msg" style="color:var(--muted);font-size:14px;margin-top:8px"></div>`);
+  const d = document.getElementById("screen");
+  d.querySelector("#gate-up").onclick = () => authAction("up");
+  d.querySelector("#gate-in").onclick = () => authAction("in");
+}
+
 function playTrack(id, isVideo) {
+  if (!SB_USER) {
+    pendingPlay = { id, isVideo };
+    openAuthGate();
+    return;
+  }
   const m = DB.messages.find((x) => x.id === id);
   const song = DB.songs.find((x) => x.id === id);
   const title = m ? `${m.title} — ${m.speaker}` : song ? `♪ ${song.title}` : id;
@@ -787,6 +843,7 @@ Promise.all([
   ensureAvatar();
   setupInstallButton();
   initAnalytics();
+  sbClient().then(() => paintAccount());
   bootRoute();
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
@@ -874,10 +931,16 @@ async function setActive(pid) {
   }
   localStorage.setItem("pco.activeProfile", pid);
   if (isRemember()) localStorage.setItem("pco.session", pid);
+  mergeGuestInto(pid);
   tab = "Home";
   paintAvatar();
   render();
   window.scrollTo(0, 0);
+  if (pendingPlay) {
+    const p = pendingPlay;
+    pendingPlay = null;
+    playTrack(p.id, p.isVideo);
+  }
   if (pendingSync && SB_USER) {
     pendingSync = false;
     afterAuth().catch(() => {});
@@ -1156,7 +1219,8 @@ async function afterAuth() {
     else if (localEmpty()) applyCloud(slice);
     else await cloudSave(); // both sides have data: device wins, merged up
   } catch { /* table missing? run the SQL in docs/SUPABASE.md */ }
-  render();
+  if (pendingPlay) renderPicker(); // choose a profile — playback starts on entry
+  else render();
 }
 
 function paintAccount() {
@@ -1265,6 +1329,7 @@ function renderLanding() {
     <p style="color:var(--muted);font-size:17px">Pastor Chris messages · LoveWorld music · Live programming — at home on your TV, phone, and tablet.</p>
     <div class="rowbtns" style="justify-content:center;margin-top:18px">
       <button class="btn primary" id="land-go" style="font-size:17px;padding:14px 34px">Sign In</button>
+      <button class="btn" id="land-browse" style="font-size:17px;padding:14px 26px">Browse first →</button>
     </div>
     <label style="display:block;margin-top:14px;color:var(--muted);font-size:14px">
       <input type="checkbox" id="land-remember" ${isRemember() ? "checked" : ""}> Keep me signed in on this device</label>
@@ -1288,6 +1353,7 @@ function renderLanding() {
     if (!e.target.checked) localStorage.removeItem("pco.session");
   };
   w.querySelector("#land-go").onclick = renderPicker;
+  w.querySelector("#land-browse").onclick = browseAsGuest;
   w.querySelector("#acc-in").onclick = () => authAction("in");
   w.querySelector("#acc-up").onclick = () => authAction("up");
   sbClient().then((sb) => { if (sb) paintAccount(); });
