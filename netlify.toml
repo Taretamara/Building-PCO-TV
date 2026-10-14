@@ -34,3 +34,9 @@
   for = "/sw.js"
   [headers.values]
     Cache-Control = "no-cache"
+
+# Admin page: invisible to search engines (access is role-gated regardless)
+[[headers]]
+  for = "/admin.html"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
