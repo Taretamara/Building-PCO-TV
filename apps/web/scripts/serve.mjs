@@ -43,6 +43,30 @@ function limited(map, ip, max, windowMs) {
 }
 const clientIp = (req) => (req.headers["x-forwarded-for"] || req.socket.remoteAddress || "local").split(",")[0].trim();
 
+/* Recurring plans (NGN kobo). Auto-created in Paystack on first use. */
+const BILLING_PLANS = {
+  monthly: { name: "PCO Monthly", interval: "monthly", amount: 150000 },
+  quarterly: { name: "PCO Quarterly", interval: "quarterly", amount: 400000 },
+  annual: { name: "PCO Yearly", interval: "annually", amount: 1500000 },
+};
+
+async function paystackPlan(secret, planId) {
+  const def = BILLING_PLANS[planId];
+  if (!def) throw new Error("unknown plan");
+  const list = await (await fetch(`${PAYSTACK_BASE}/plan?perPage=100`, {
+    headers: { Authorization: `Bearer ${secret}` },
+  })).json();
+  const found = (list.data || []).find((p) => p.name === def.name && p.amount === def.amount && p.interval === def.interval);
+  if (found) return found.plan_code;
+  const created = await (await fetch(`${PAYSTACK_BASE}/plan`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${secret}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ ...def, currency: "NGN", send_invoices: true }),
+  })).json();
+  if (!created.status) throw new Error("plan setup failed");
+  return created.data.plan_code;
+}
+
 function json(res, code, obj) {
   res.writeHead(code, { "Content-Type": "application/json" }).end(JSON.stringify(obj));
 }
@@ -98,6 +122,53 @@ createServer(async (req, res) => {
       const mx = await resolveMx(domain);
       return json(res, 200, { valid: mx.length > 0 });
     } catch { return json(res, 200, { valid: false }); }
+  }
+
+  // POST /api/paystack/billing { action: "init"|"status"|"disable", ... }
+  if (req.method === "POST" && url.pathname === "/api/paystack/billing") {
+    const ip = clientIp(req);
+    if (limited(hits, ip, RATE.max, RATE.windowMs)) return json(res, 429, { error: "too many requests" });
+    const secret = process.env.PAYSTACK_SECRET_KEY;
+    if (!secret) return json(res, 503, { error: "payments not configured" });
+    let body;
+    try { body = await readBody(req); } catch { return json(res, 400, { error: "bad json" }); }
+    try {
+      if (body.action === "init") {
+        if (limited(initHits, ip, RATE.initMax, RATE.initWindowMs)) return json(res, 429, { error: "checkout limit reached, try later" });
+        if (!body.email?.includes("@")) return json(res, 400, { error: "valid email required" });
+        const code = await paystackPlan(secret, body.plan);
+        const out = await paystack("/transaction/initialize", secret, {
+          email: body.email, amount: BILLING_PLANS[body.plan].amount,
+          plan: code, callback_url: `${baseUrl(req)}/callback.html`,
+        });
+        if (!out.status) return json(res, 502, { error: "provider declined request" });
+        return json(res, 200, { authorization_url: out.data.authorization_url, reference: out.data.reference, plan: body.plan });
+      }
+      if (body.action === "status") {
+        if (!body.email?.includes("@")) return json(res, 400, { error: "valid email required" });
+        const cust = await (await fetch(`${PAYSTACK_BASE}/customer/${encodeURIComponent(body.email)}`, {
+          headers: { Authorization: `Bearer ${secret}` },
+        })).json();
+        if (!cust.status) return json(res, 200, { subscription: null });
+        const subs = await (await fetch(`${PAYSTACK_BASE}/subscription?customer=${cust.data.id}&perPage=5`, {
+          headers: { Authorization: `Bearer ${secret}` },
+        })).json();
+        const s = (subs.data || [])[0];
+        if (!s) return json(res, 200, { subscription: null });
+        return json(res, 200, { subscription: {
+          code: s.subscription_code, token: s.email_token, status: s.status,
+          next_payment: s.next_payment_date, amount: s.amount,
+          card: s.authorization ? `${s.authorization.brand || "card"} •••• ${s.authorization.last4} (exp ${s.authorization.exp_month}/${s.authorization.exp_year})` : null,
+        } });
+      }
+      if (body.action === "disable") {
+        if (!body.code || !body.token) return json(res, 400, { error: "subscription reference required" });
+        const out = await paystack("/subscription/disable", secret, { code: body.code, token: body.token });
+        if (!out.status) return json(res, 502, { error: "provider declined request" });
+        return json(res, 200, { cancelled: true });
+      }
+      return json(res, 400, { error: "unknown action" });
+    } catch { return json(res, 502, { error: "provider unreachable" }); }
   }
 
   // POST /api/paystack/initialize { email, amount } → { authorization_url, reference }

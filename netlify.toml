@@ -29,6 +29,12 @@
   status = 200
   force = true
 
+[[redirects]]
+  from = "/api/paystack/billing"
+  to = "/.netlify/functions/paystack-billing"
+  status = 200
+  force = true
+
 # Service worker must never be cached or updates won't reach browsers
 [[headers]]
   for = "/sw.js"

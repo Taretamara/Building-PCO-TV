@@ -256,12 +256,12 @@ function Home(s) {
     <h1>Turn on. Find something meaningful. Watch.</h1>
     <p>Pastor Chris messages, LoveWorld music, and live programming.</p>
     <div class="rowbtns"><button class="btn primary" id="hero-play">▶ Continue Watching</button>
-    ${premium ? "" : `<button class="btn" id="hero-sub">★ Subscribe — ₦1,500/mo (test)</button>`}</div></div>`);
+    ${premium ? "" : `<button class="btn" id="hero-sub">★ Subscribe — plans from ₦1,500/mo (test)</button>`}</div></div>`);
   s.append(hero);
   installPopup();
   hero.querySelector("#hero-play").onclick = () => cwIds.length && openDetail(cwIds[0]);
   const subBtn = hero.querySelector("#hero-sub");
-  if (subBtn) subBtn.onclick = openSubscribe;
+  if (subBtn) subBtn.onclick = openBilling;
   if (cwIds.length) {
     s.append(rail("Continue Watching", "resume where you stopped",
       cwIds.map((id) => DB.messages.find((m) => m.id === id)).filter(Boolean).map((m) => card(m))));
@@ -492,33 +492,9 @@ function openPlaylist(id) {
   document.getElementById("play-all").onclick = () => { queue = { ids: songs.map((x) => x.id), i: 0 }; playTrack(queue.ids[0]); };
 }
 
-/* Test-mode subscription via Paystack (key stays server-side in .env). */
+/* Old single-plan checkout retired — Billing sheet (plans + manage) replaces it. */
 function openSubscribe() {
-  openSheet("★ Subscribe (test mode)", `
-    <div style="color:var(--muted)">PCO Monthly — ₦1,500/mo. Test checkout, no real charge.</div>
-    <div style="margin:14px 0"><input id="sub-email" class="searchbar" type="email" placeholder="you@example.com" aria-label="Email"></div>
-    <div class="rowbtns"><button class="btn primary" id="sub-go">Continue to Paystack test checkout</button></div>
-    <div id="sub-msg" style="color:var(--muted);margin-top:10px"></div>`);
-  document.getElementById("sub-go").onclick = async () => {
-    const email = document.getElementById("sub-email").value.trim();
-    const msg = document.getElementById("sub-msg");
-    msg.textContent = "Contacting test checkout…";
-    try {
-      const r = await fetch("/api/paystack/initialize", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, amount: 150000 }),
-      });
-      const out = await r.json();
-      if (!r.ok) throw new Error(out.error || "checkout failed");
-      track("checkout_started", { plan: "monthly-ngn" });
-      location.href = out.authorization_url;
-    } catch (e) {
-      msg.textContent = e.message === "payments not configured"
-        ? "Payments aren't configured on this server yet (PAYSTACK_SECRET_KEY missing in .env)."
-        : "Checkout failed: " + e.message;
-    }
-  };
+  openBilling();
 }
 
 /* Guest browsing: a device-local "Guest" profile keeps namespacing sane
@@ -566,6 +542,7 @@ function openAuthGate() {
     <input id="acc-pw" class="searchbar" type="password" placeholder="Password (6+ characters)" aria-label="Password">
     <div class="rowbtns"><button class="btn primary" id="gate-up">Create account</button>
     <button class="btn" id="gate-in">I have an account</button></div>
+    <div style="margin-top:8px"><a href="reset.html" style="color:var(--muted);font-size:14px">Forgot password?</a></div>
     <div id="acc-msg" style="color:var(--muted);font-size:14px;margin-top:8px"></div>`);
   const d = document.getElementById("screen");
   d.querySelector("#gate-up").onclick = () => authAction("up");
@@ -874,6 +851,8 @@ async function mergeCloudCatalog() {
   updateOnline();
   ensureAvatar();
   ensureTvButton();
+  ensureDrawer();
+  applySettings();
   setupInstallButton();
   initAnalytics();
   sbClient().then(() => paintAccount());
@@ -1518,6 +1497,155 @@ function remoteUI(code) {
   };
 }
 
+/* ---- Sidebar drawer: Billing, Settings, Account (not a dashboard) ---- */
+const BILLING_PLANS_UI = [
+  { id: "monthly", name: "Monthly", price: "₦1,500/mo" },
+  { id: "quarterly", name: "Quarterly", price: "₦4,000/3 mo" },
+  { id: "annual", name: "Annual", price: "₦15,000/yr" },
+];
+
+function ensureDrawer() {
+  if (document.getElementById("menu-btn")) return;
+  const b = el(`<button id="menu-btn" aria-label="Menu">☰</button>`);
+  b.style.cssText = "background:none;border:1px solid var(--line);color:var(--text);border-radius:10px;padding:9px 12px;font-size:17px;margin-right:4px";
+  b.onclick = openDrawer;
+  document.querySelector(".nav").prepend(b);
+  const scrim = el(`<div id="scrim" hidden></div>`);
+  scrim.onclick = closeDrawer;
+  document.body.append(scrim);
+  const d = el(`<aside id="drawer" hidden aria-label="Menu">
+    <div class="drawer-head"><div class="logo">PCO <span>TV</span></div><button id="drawer-x" aria-label="Close">✕</button></div>
+    <button data-go="billing">💳 Billing</button>
+    <button data-go="settings">⚙ Settings</button>
+    <button data-go="account">👤 Account</button>
+    <button data-go="tv">📺 TV mode</button>
+    <button data-go="install">📲 Install app</button>
+    <a href="support.html">Support</a>
+    <a href="privacy.html">Privacy</a>
+    <a href="terms.html">Terms</a>
+  </aside>`);
+  document.body.append(d);
+  d.querySelector("#drawer-x").onclick = closeDrawer;
+  d.querySelectorAll("[data-go]").forEach((x) => (x.onclick = () => {
+    closeDrawer();
+    ({ billing: openBilling, settings: openSettings, account: () => (SB_USER ? accountSheet() : renderLanding()), tv: openTvRemote, install: openInstallGuide })[x.dataset.go]();
+  }));
+}
+function openDrawer() {
+  document.getElementById("drawer").hidden = false;
+  document.getElementById("scrim").hidden = false;
+  requestAnimationFrame(() => document.getElementById("drawer").classList.add("open"));
+}
+function closeDrawer() {
+  document.getElementById("drawer")?.classList.remove("open");
+  const d = document.getElementById("drawer"), s = document.getElementById("scrim");
+  if (d) setTimeout(() => { d.hidden = true; }, 200);
+  if (s) s.hidden = true;
+}
+
+async function billingCall(payload) {
+  const r = await fetch("/api/paystack/billing", {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
+  });
+  const out = await r.json();
+  if (!r.ok) throw new Error(out.error || "billing failed");
+  return out;
+}
+
+function openBilling() {
+  if (!SB_USER) {
+    openSheet("💳 Billing", `<p style="color:var(--muted)">Sign in to manage your subscription — plans, saved card, and cancel live here.</p>
+      <div class="rowbtns"><button class="btn primary" id="b-login">Sign in</button></div>`);
+    document.getElementById("screen").querySelector("#b-login").onclick = renderLanding;
+    return;
+  }
+  openSheet("💳 Billing", `<div id="bill-body"><p style="color:var(--muted)">Loading subscription…</p></div>`);
+  const body = document.getElementById("screen").querySelector("#bill-body");
+  billingCall({ action: "status", email: SB_USER.email }).then(({ subscription: sub }) => {
+    const active = sub && sub.status === "active";
+    body.innerHTML = `
+      ${active ? `<div class="detail" style="margin:0 0 12px"><b>★ ${sub.amount / 100 >= 1000 ? "Annual" : sub.amount / 100 >= 3000 ? "Quarterly" : "Monthly"} · Active</b>
+        <div style="color:var(--muted);font-size:14px">Renews ${sub.next_payment ? new Date(sub.next_payment).toDateString() : "soon"} · ${sub.card || "card on file"}</div>
+        <div class="rowbtns"><button class="btn" id="b-cancel">Cancel auto-renew</button></div></div>`
+      : `<p style="color:var(--muted)">No active subscription${sub ? ` (last: ${sub.status})` : ""}. Pick a plan — test mode, no real charge:</p>
+        <div class="chips" id="b-plans">${BILLING_PLANS_UI.map((p, i) =>
+          `<button data-plan="${p.id}" aria-pressed="${i === 0}"><b>${p.name}</b><br>${p.price}</button>`).join("")}</div>
+        <div class="rowbtns"><button class="btn primary" id="b-go">Continue to Paystack test checkout</button></div>`}
+      <div id="b-msg" style="color:var(--muted);font-size:14px;margin-top:8px"></div>`;
+    let plan = "monthly";
+    body.querySelectorAll("[data-plan]")?.forEach((x) => (x.onclick = () => {
+      plan = x.dataset.plan;
+      body.querySelectorAll("[data-plan]").forEach((y) => y.setAttribute("aria-pressed", String(y === x)));
+    }));
+    const go = body.querySelector("#b-go");
+    if (go) go.onclick = async () => {
+      body.querySelector("#b-msg").textContent = "Starting test checkout…";
+      try {
+        const out = await billingCall({ action: "init", email: SB_USER.email, plan });
+        track("checkout_started", { plan });
+        location.href = out.authorization_url;
+      } catch (e) { body.querySelector("#b-msg").textContent = "Checkout failed: " + e.message; }
+    };
+    const cancel = body.querySelector("#b-cancel");
+    if (cancel) cancel.onclick = async () => {
+      if (!confirm("Cancel auto-renew? You keep access until the period ends.")) return;
+      body.querySelector("#b-msg").textContent = "Cancelling…";
+      try {
+        await billingCall({ action: "disable", code: sub.code, token: sub.token });
+        localStorage.removeItem(K("premium"));
+        body.querySelector("#b-msg").textContent = "Auto-renew cancelled ✓";
+        setTimeout(openBilling, 1200);
+      } catch (e) { body.querySelector("#b-msg").textContent = "Cancel failed: " + e.message; }
+    };
+  }).catch((e) => {
+    body.innerHTML = `<div class="empty">Billing unavailable: ${esc(e.message)}. Everything else still works.</div>`;
+  });
+}
+
+/* Settings: language (framework ready), brightness, light/dark theme. */
+function appSettings() {
+  try { return JSON.parse(localStorage.getItem("pco.settings") || "{}"); }
+  catch { return {}; }
+}
+function saveSettings(s) { localStorage.setItem("pco.settings", JSON.stringify(s)); }
+function applySettings() {
+  const s = appSettings();
+  document.documentElement.dataset.theme = s.theme === "light" ? "light" : "dark";
+  let ov = document.getElementById("bright");
+  if (s.brightness > 0) {
+    if (!ov) {
+      ov = el(`<div id="bright"></div>`);
+      document.body.append(ov);
+    }
+    ov.style.opacity = Math.min(0.7, s.brightness / 100);
+  } else ov?.remove();
+}
+function openSettings() {
+  const s = appSettings();
+  openSheet("⚙ Settings", `
+    <h2>Language</h2>
+    <div class="chips"><button aria-pressed="true">English ✓</button></div>
+    <p style="color:var(--muted);font-size:14px">More languages (Français, Yorùbá, Igbo, Hausa) arrive with the multi-language release — strings are already externalized.</p>
+    <h2>Brightness</h2>
+    <input id="set-bright" type="range" min="0" max="70" value="${s.brightness || 0}" style="width:100%" aria-label="Brightness">
+    <h2>Appearance</h2>
+    <div class="chips" id="set-theme">
+      <button data-th="dark" aria-pressed="${(s.theme || "dark") === "dark"}">🌙 Dark</button>
+      <button data-th="light" aria-pressed="${s.theme === "light"}">☀ Light</button>
+    </div>`);
+  const d = document.getElementById("screen");
+  d.querySelector("#set-bright").oninput = (e) => {
+    const next = { ...appSettings(), brightness: +e.target.value };
+    saveSettings(next);
+    applySettings();
+  };
+  d.querySelectorAll("[data-th]").forEach((x) => (x.onclick = () => {
+    saveSettings({ ...appSettings(), theme: x.dataset.th });
+    applySettings();
+    openSettings();
+  }));
+}
+
 /* ---- Landing + persistent session (Netflix-style: log in once, stay in) ---- */
 const isRemember = () => localStorage.getItem("pco.remember") !== "0";
 const savedSession = () => localStorage.getItem("pco.session") || "";
@@ -1557,6 +1685,7 @@ function renderLanding() {
       <input id="acc-pw" class="searchbar" type="password" placeholder="Password (6+ characters)" aria-label="Password">
       <div class="rowbtns"><button class="btn primary" id="acc-in">Sign in</button>
       <button class="btn" id="acc-up">Create account</button></div>
+      <div style="margin-top:8px"><a href="reset.html" style="color:var(--muted);font-size:14px">Forgot password?</a></div>
       <div id="acc-msg" style="color:var(--muted);font-size:14px;margin-top:8px"></div>
     </div>
     <div class="chips" style="justify-content:center;margin-top:22px">

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0E0C0A">
+<title>PCO TV — Reset password</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<main style="max-width:480px;margin:40px auto;padding:0 16px" id="root">
+  <p class="kicker" style="color:var(--gold2);font-size:12px;letter-spacing:.18em">PCO TV · PASSWORD RESET</p>
+  <h1>Reset password</h1>
+  <div id="step-ask">
+    <p style="color:var(--muted)">Enter your account email — we'll send a reset link.</p>
+    <input id="email" class="searchbar" type="email" placeholder="you@example.com" aria-label="Email">
+    <div class="rowbtns"><button class="btn primary" id="send">Send reset link</button></div>
+  </div>
+  <div id="step-new" hidden>
+    <p style="color:var(--muted)">Choose a new password (6+ characters).</p>
+    <input id="pw" class="searchbar" type="password" placeholder="New password" aria-label="New password">
+    <div class="rowbtns"><button class="btn primary" id="save">Save password</button></div>
+  </div>
+  <div id="msg" style="color:var(--muted);margin-top:10px"></div>
+  <p><a href="index.html">← Back to PCO TV</a></p>
+</main>
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.44.4";
+const msg = (t) => (document.getElementById("msg").textContent = t);
+let sb = null;
+try {
+  const cfg = await (await fetch("/api/config")).json();
+  sb = createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+} catch { msg("Cannot reach configuration. Check connection."); }
+if (sb) {
+  sb.auth.onAuthStateChange((ev) => {
+    if (ev === "PASSWORD_RECOVERY") {
+      document.getElementById("step-ask").hidden = true;
+      document.getElementById("step-new").hidden = false;
+    }
+  });
+  document.getElementById("send").onclick = async () => {
+    const email = document.getElementById("email").value.trim();
+    if (!email.includes("@")) return msg("Enter a valid email.");
+    msg("Sending…");
+    const { error } = await sb.auth.resetPasswordForEmail(email, {
+      redirectTo: location.origin + location.pathname.replace(/[^/]*$/, "") + "reset.html",
+    });
+    msg(error ? "Couldn't send: " + error.message : "Check your inbox for the reset link.");
+  };
+  document.getElementById("save").onclick = async () => {
+    const pw = document.getElementById("pw").value;
+    if (pw.length < 6) return msg("Password needs 6+ characters.");
+    const { error } = await sb.auth.updateUser({ password: pw });
+    msg(error ? "Couldn't save: " + error.message : "Saved ✓ — sign in with your new password.");
+  };
+}
+</script>
+</body>
+</html>
