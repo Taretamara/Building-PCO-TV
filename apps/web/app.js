@@ -2,9 +2,9 @@
 const TABS = ["Home", "Messages", "Music", "Live", "Programs", "Favorites", "Community", "Search"];
 const DEFAULT_PROFILES = [
   { id: "tare", name: "Tare", color: "#D9A441" },
-  { id: "mom", name: "Mom", color: "#7FB2E5" },
-  { id: "dad", name: "Dad", color: "#7FD6B2" },
-  { id: "kids", name: "Kids", color: "#E8AFAF" },
+  { id: "mom", name: "Mom", color: "#D9A441" },
+  { id: "dad", name: "Dad", color: "#D9A441" },
+  { id: "kids", name: "Kids", color: "#D9A441" },
 ];
 function profiles() { return JSON.parse(localStorage.getItem("pco.profiles") || "[]"); }
 function activeId() { return localStorage.getItem("pco.activeProfile") || ""; }
@@ -101,8 +101,13 @@ function commentListHtml(msgId) {
     <button class="amen" data-report="${c.key}">Report</button></div>`).join("");
 }
 
+/* Reflections need an account (spam control). Guests read freely; posting
+   or Amen-ing opens the signup gate, then completes the action. */
+let pendingComment = null;
+
 function wireComments(scope, msgId, rerender) {
   scope.querySelectorAll("[data-amen]").forEach((b) => (b.onclick = () => {
+    if (!SB_USER) { openAuthGate(); return; }
     const [mid, ref] = b.dataset.amen.split(":");
     if (ref.startsWith("u")) toggleAmen(mid, +ref.slice(1));
     rerender();
@@ -119,8 +124,14 @@ function wireComments(scope, msgId, rerender) {
   if (form) form.onsubmit = (e) => {
     e.preventDefault();
     const input = scope.querySelector("[data-cinput]");
-    if (!input.value.trim().slice(0, 500)) return;
-    postComment(msgId, input.value.trim().slice(0, 500));
+    const text = input.value.trim().slice(0, 500);
+    if (!text) return;
+    if (!SB_USER) {
+      pendingComment = { msgId, text, rerender };
+      openAuthGate();
+      return;
+    }
+    postComment(msgId, text);
     rerender();
   };
 }
@@ -143,7 +154,7 @@ function migrateLegacy() {
     localStorage.setItem("pco.profiles", JSON.stringify([]));
   }
 }
-const PROFILE_COLORS = ["#D9A441", "#7FB2E5", "#7FD6B2", "#E8AFAF", "#B79CFF", "#FF9C6B"];
+const PROFILE_COLORS = ["#D9A441"];
 function addProfile(name) {
   const clean = name.trim().slice(0, 20);
   if (!clean) return null;
@@ -310,7 +321,7 @@ function Live(s) {
   const up = DB.live.filter((l) => l.status === "scheduled");
   const rec = DB.live.filter((l) => l.status === "ended");
   if (!now.length) {
-    s.append(el(`<div class="empty" style="margin-top:14px"><b style="color:var(--text)">Nothing is live right now.</b><br>Catch up below — upcoming and recent broadcasts.</div>`));
+    s.append(el(`<div class="empty" style="margin-top:14px"><b style="color:var(--text)">Nothing is live right now.</b><br>Catch up below.</div>`));
   }
   const mk = (arr, badge) => arr.map((l) => el(`<button class="card" data-live="${l.id}"><div class="thumb" data-art="${l.id}‖${l.title}‖0"><span class="badge">${badge}</span></div><div class="meta"><b>${l.title}</b><div>${progName(l.programId)}</div></div></button>`));
   if (now.length) s.append(rail("Live Now", "", mk(now, "● LIVE")));
@@ -338,7 +349,7 @@ function Favorites(s) {
   const favs = store.favs, saved = store.saved;
   const toCards = (ids) => ids.map((id) => DB.messages.find((m) => m.id === id)).filter(Boolean).map((m) => card(m));
   s.append(el(`<h2>Favorites <small>${favs.length}</small></h2>`));
-  s.append(favs.length ? rail("", "", toCards(favs)) : el(`<div class="empty">No favorites yet. Open any message and tap ♥ Favorite.</div>`));
+  s.append(favs.length ? rail("", "", toCards(favs)) : el(`<div class="empty">Nothing here yet. Tap ♥ on anything you love.</div>`));
   s.append(el(`<h2>Save for Later <small>${saved.length}</small></h2>`));
   if (saved.length) s.append(rail("", "", toCards(saved)));
 }
@@ -369,8 +380,8 @@ function openFinished(id) {
 
 function Community(s) {
   s.append(el(`<div class="hero"><div class="kicker">LEARN OUT LOUD · TEST DATA</div>
-    <h1>What the family learnt this week</h1>
-    <p>Reflections from every profile on this device, plus seeded community voices. Real community ships with moderation (post-MVP).</p></div>`));
+    <h1>What the family learnt</h1>
+    <p>Reflections from every profile on this device.</p></div>`));
   const items = [];
   for (const mid of Object.keys(store.comments)) {
     for (const c of store.comments[mid]) items.push({ msgId: mid, ...c, when: c.at || 0 });
@@ -434,6 +445,7 @@ function openDetail(id) {
     (x.programId === m.programId || x.topicIds.some((t) => m.topicIds.includes(t)))).slice(0, 4);
   openSheet(m.title, `
     <div style="color:var(--muted)">${m.speaker} · ${progName(m.programId)} · ${m.topicIds.map(topicName).join(", ")} · ${mins(m.durationSec)}</div>
+    <div style="color:var(--faint);font-size:12px">Demo content · © LoveWorld</div>
     <p style="color:var(--muted)">${m.description}</p>
     <div class="actions">
       <button class="btn primary" data-watch="${m.id}">▶ ${store.progress[id] ? "Resume" : "Play"}</button>
@@ -502,7 +514,7 @@ function openSubscribe() {
 function ensureGuest() {
   const list = profiles();
   if (!list.some((p) => p.id === "guest")) {
-    list.push({ id: "guest", name: "Guest", color: "#8A7D68", guest: true });
+    list.push({ id: "guest", name: "Guest", color: "#D9A441", guest: true });
     localStorage.setItem("pco.profiles", JSON.stringify(list));
   }
 }
@@ -537,7 +549,7 @@ function mergeGuestInto(pid) {
 let pendingPlay = null;
 function openAuthGate() {
   openSheet("🔑 Create a free account to watch", `
-    <p style="color:var(--muted)">Browsing stays free. One free account unlocks playback on all your devices.</p>
+    <p style="color:var(--muted)">Browsing is free. One account unlocks playback everywhere.</p>
     <input id="acc-email" class="searchbar" type="email" placeholder="you@example.com" aria-label="Email">
     <input id="acc-pw" class="searchbar" type="password" placeholder="Password (6+ characters)" aria-label="Password">
     <div class="rowbtns"><button class="btn primary" id="gate-up">Create account</button>
@@ -742,6 +754,17 @@ function updateOnline() {
 }
 window.addEventListener("online", updateOnline);
 window.addEventListener("offline", updateOnline);
+
+/* Header auto-hides on scroll down, returns on scroll up (cleaner reading). */
+let lastY = 0;
+window.addEventListener("scroll", () => {
+  const y = window.scrollY || 0;
+  const nav = document.querySelector(".nav");
+  if (!nav) return;
+  if (y > 140 && y > lastY + 4) nav.classList.add("nav-hidden");
+  else if (y < lastY - 4 || y <= 140) nav.classList.remove("nav-hidden");
+  lastY = y;
+}, { passive: true });
 
 /* ---- Install: always-visible button + per-device guide ----
    Chrome/Android may offer a one-tap prompt (beforeinstallprompt); every
@@ -1078,7 +1101,7 @@ function paintAvatar() {
   b.style.display = "";
   const p = activeProfile();
   b.textContent = p ? p.name[0].toUpperCase() : "?";
-  b.style.cssText = `margin-left:8px;width:38px;height:38px;border-radius:50%;border:2px solid ${p ? p.color : "#8A7D68"};background:#201914;color:#F7F1E6;font-size:17px;font-weight:800`;
+  b.style.cssText = `margin-left:8px;width:38px;height:38px;border-radius:50%;border:2px solid var(--gold);background:var(--surface2);color:var(--text);font-size:17px;font-weight:800`;
 }
 
 /* ---- Analytics + error capture (PostHog, anonymous, offline-buffered) ----
@@ -1233,6 +1256,13 @@ async function afterAuth() {
     else if (localEmpty()) applyCloud(slice);
     else await cloudSave(); // both sides have data: device wins, merged up
   } catch { /* table missing? run the SQL in docs/SUPABASE.md */ }
+  if (pendingComment) {
+    const pc = pendingComment;
+    pendingComment = null;
+    try { postComment(pc.msgId, pc.text); } catch { /* session not ready */ }
+    openDetail(pc.msgId);
+    return;
+  }
   if (pendingPlay) renderPicker(); // choose a profile — playback starts on entry
   else render();
 }
@@ -1685,7 +1715,7 @@ function renderLanding() {
   const w = el(`<div style="text-align:center;padding:48px 0 30px;max-width:640px;margin:0 auto">
     <div class="logo" style="font-size:34px">PCO <span>TV</span></div>
     <h1 style="font-size:clamp(30px,6vw,46px);margin:14px 0 6px">Turn on. Find something meaningful. Watch.</h1>
-    <p style="color:var(--muted);font-size:17px">Pastor Chris messages · LoveWorld music · Live programming — at home on your TV, phone, and tablet.</p>
+    <p style="color:var(--muted);font-size:17px">Messages, music, and live for the whole family.</p>
     <div class="rowbtns" style="justify-content:center;margin-top:18px">
       <button class="btn primary" id="land-go" style="font-size:17px;padding:14px 34px">Sign In</button>
       <button class="btn" id="land-browse" style="font-size:17px;padding:14px 26px">Browse first →</button>
@@ -1756,8 +1786,8 @@ function renderPicker() {
   profiles().forEach((p) => {
     const locked = hasPin(p.id);
     const cell = el(`<div style="display:flex;flex-direction:column;gap:8px;align-items:center"></div>`);
-    const t = el(`<button style="background:var(--surface);border:2px solid ${p.color};border-radius:16px;padding:22px 26px;color:var(--text);font-size:17px;min-width:130px">
-      <div style="font-size:34px;font-weight:800;color:${p.color}">${esc(p.name[0])}</div>${esc(p.name)} ${locked ? "🔒" : ""}</button>`);
+    const t = el(`<button style="background:var(--surface);border:2px solid var(--gold);border-radius:16px;padding:22px 26px;color:var(--text);font-size:17px;min-width:130px">
+      <div style="font-size:34px;font-weight:800;color:var(--gold)">${esc(p.name[0])}</div>${esc(p.name)} ${locked ? "🔒" : ""}</button>`);
     t.onclick = () => enterProfile(p.id);
     const row = el(`<div style="display:flex;gap:6px"></div>`);
     const gear = el(`<button class="btn" style="font-size:13px;padding:6px 12px">${locked ? "PIN ⚙" : "Set PIN 🔓"}</button>`);

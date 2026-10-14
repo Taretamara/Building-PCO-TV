@@ -12,6 +12,11 @@ pnpm --filter @pco/web dev
 ## What's inside
 - `index.html` + `styles.css` + `app.js` — 7 tabs (Home/Messages/Music/Live/Programs/Favorites/Search), detail pages, music queue, offline bar. Favorites, saved, follows, and progress persist in `localStorage`.
 - `data/seed.json` — copied from `packages/content-models/seed/seed.json` by `scripts/sync-data.mjs`. Test data only.
+
+## Content API (where content comes from)
+1. `GET data/seed.json` — bundled demo catalog (56 messages, music, live). The single source in git.
+2. Supabase `pco_catalog` (table, public-read) — admin-published items merge over the seed at boot. See `docs/SUPABASE.md` §4.
+3. Real licensed LoveWorld media replaces both when available. All demo content © LoveWorld (credited in footer + detail pages).
 - `manifest.webmanifest` + `icons/` — installable (Add to Home Screen). Note: store-grade install prompts need 192/512px PNG icons; SVGs ship for now.
 - `sw.js` — caches the app shell + seed for offline use.
 - `scripts/serve.mjs` — zero-dependency static server (service workers require http, not file://) + Paystack init/verify endpoints (secret key server-side only).
