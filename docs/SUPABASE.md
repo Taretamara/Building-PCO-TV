@@ -58,13 +58,29 @@ alter table pco_catalog enable row level security;
 drop policy if exists "public read published" on pco_catalog;
 create policy "public read published" on pco_catalog
   for select using (status = 'published');
+
+-- Allowlist: ONLY emails in this table can use admin.html or write content.
+create table if not exists pco_admins (
+  email text primary key,
+  role text not null check (role in ('content_admin', 'super_admin')),
+  created_at timestamptz default now()
+);
+alter table pco_admins enable row level security;
+drop policy if exists "own row" on pco_admins;
+create policy "own row" on pco_admins
+  for select to authenticated using (email = (auth.jwt() ->> 'email'));
 drop policy if exists "admins write" on pco_catalog;
 create policy "admins write" on pco_catalog
   for all to authenticated
-  using ((auth.jwt() -> 'app_metadata' ->> 'role') in ('content_admin', 'super_admin'))
-  with check ((auth.jwt() -> 'app_metadata' ->> 'role') in ('content_admin', 'super_admin'));
+  using (exists (select 1 from pco_admins
+    where email = (auth.jwt() ->> 'email') and role in ('content_admin', 'super_admin')))
+  with check (exists (select 1 from pco_admins
+    where email = (auth.jwt() ->> 'email') and role in ('content_admin', 'super_admin')));
 ```
-Then make yourself admin (no SQL needed): Dashboard → Authentication →
-Users → your user → **⋯ → Edit user** → **App metadata** → set
-`{"role": "super_admin"}` → Save. Open `admin.html` on the site, sign in,
-and publish — items appear in the app within a minute.
+Then add yourself (replace with your email, keep it lowercase):
+```sql
+insert into pco_admins (email, role) values ('you@example.com', 'super_admin');
+```
+Add more admins the same way (`content_admin` for editors). Remove one with
+`delete from pco_admins where email = '...'`. Viewer signups are unaffected —
+anyone can still create a viewer account; only allowlisted emails pass admin.

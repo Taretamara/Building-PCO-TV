@@ -50,11 +50,12 @@ document.getElementById("go").onclick = async () => {
     password: document.getElementById("pw").value,
   });
   if (error) return msg("Couldn't sign in: " + error.message);
-  role = data.user?.app_metadata?.role;
-  if (!["content_admin", "super_admin"].includes(role)) {
+  const { data: admin, error: adminErr } = await sb.from("pco_admins").select("role").eq("email", data.user.email.toLowerCase()).maybeSingle();
+  if (adminErr || !admin || !["content_admin", "super_admin"].includes(admin.role)) {
     await sb.auth.signOut();
-    return msg("Access denied. This account is not authorized. This attempt has been logged.");
+    return msg("Access denied. This account is not authorized.");
   }
+  role = admin.role;
   document.getElementById("auth").hidden = true;
   const panel = document.getElementById("panel");
   panel.hidden = false;
