@@ -778,10 +778,9 @@ function openInstallGuide() {
 }
 
 function setupInstallButton() {
+  // No top-bar button (per request): the popup + sidebar entry are the way in.
   const b = document.getElementById("install");
-  if (isInstalled()) { b.hidden = true; return; }
-  b.hidden = false;
-  b.onclick = openInstallGuide;
+  if (b) b.hidden = true;
 }
 
 /* Install suggestion popup: appears once per visit, stays 5s, ✕ to dismiss.
@@ -1074,6 +1073,9 @@ function ensureAvatar() {
 function paintAvatar() {
   const b = document.getElementById("profile-btn");
   if (!b) return;
+  // Profiles stay invisible until sign-in; guests just browse.
+  if (!SB_USER) { b.style.display = "none"; return; }
+  b.style.display = "";
   const p = activeProfile();
   b.textContent = p ? p.name[0].toUpperCase() : "?";
   b.style.cssText = `margin-left:8px;width:38px;height:38px;border-radius:50%;border:2px solid ${p ? p.color : "#8A7D68"};background:#201914;color:#F7F1E6;font-size:17px;font-weight:800`;
@@ -1155,6 +1157,7 @@ async function sbClient() {
     SB.auth.onAuthStateChange((_ev, session) => {
       SB_USER = session?.user || null;
       paintAccount();
+      paintAvatar();
     });
     return SB;
   } catch { return null; }
@@ -1237,16 +1240,7 @@ async function afterAuth() {
 function paintAccount() {
   let chip = document.getElementById("account-chip");
   document.getElementById("signin-btn")?.remove();
-  if (!SB_USER) {
-    chip?.remove();
-    if (!document.getElementById("signin-btn")) {
-      const b = el(`<button id="signin-btn">Sign In</button>`);
-      b.onclick = renderLanding;
-      b.style.cssText = "margin-left:8px;background:var(--gold);border:0;border-radius:10px;padding:9px 14px;font-weight:700;color:#1a1408";
-      document.querySelector(".nav").append(b);
-    }
-    return;
-  }
+  if (!SB_USER) { chip?.remove(); return; }
   if (!chip) {
     chip = el(`<button id="account-chip" aria-label="Account"></button>`);
     chip.onclick = accountSheet;
@@ -1533,7 +1527,8 @@ function ensureDrawer() {
     <div class="drawer-head"><div class="logo">PCO <span>TV</span></div><button id="drawer-x" aria-label="Close">✕</button></div>
     <button data-go="billing">💳 Billing</button>
     <button data-go="settings">⚙ Settings</button>
-    <button data-go="account">👤 Account</button>
+    <button data-go="account" id="drawer-account">👤 Account</button>
+    <button data-go="signin" id="drawer-signin">🔑 Sign In</button>
     <button data-go="tv">📺 TV mode</button>
     <button data-go="install">📲 Install app</button>
     <a href="support.html">Support</a>
@@ -1544,10 +1539,13 @@ function ensureDrawer() {
   d.querySelector("#drawer-x").onclick = closeDrawer;
   d.querySelectorAll("[data-go]").forEach((x) => (x.onclick = () => {
     closeDrawer();
-    ({ billing: openBilling, settings: openSettings, account: () => (SB_USER ? accountSheet() : renderLanding()), tv: openTvRemote, install: openInstallGuide })[x.dataset.go]();
+    ({ billing: openBilling, settings: openSettings, account: () => (SB_USER ? accountSheet() : renderLanding()), signin: renderLanding, tv: openTvRemote, install: openInstallGuide })[x.dataset.go]();
   }));
 }
+
 function openDrawer() {
+  document.getElementById("drawer-signin").style.display = SB_USER ? "none" : "";
+  document.getElementById("drawer-account").style.display = SB_USER ? "" : "none";
   document.getElementById("drawer").hidden = false;
   document.getElementById("scrim").hidden = false;
   requestAnimationFrame(() => document.getElementById("drawer").classList.add("open"));
