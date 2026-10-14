@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0E0C0A">
+<title>PCO TV — Admin</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<main style="max-width:720px;margin:0 auto;padding:24px 16px 64px" id="root">
+  <p class="kicker" style="color:var(--gold2);font-size:12px;letter-spacing:.18em">PCO TV · ADMIN</p>
+  <h1>Content Admin</h1>
+  <div id="auth">
+    <p style="color:var(--muted)">Sign in with an admin account. Roles are assigned in Supabase (user → app metadata → <code>{"role":"content_admin"}</code>).</p>
+    <input id="email" class="searchbar" type="email" placeholder="admin@example.com" aria-label="Email">
+    <input id="pw" class="searchbar" type="password" placeholder="Password" aria-label="Password">
+    <div class="rowbtns"><button class="btn primary" id="go">Sign in</button></div>
+    <div id="msg" style="color:var(--muted);margin-top:8px"></div>
+  </div>
+  <div id="panel" hidden>
+    <p>Signed in as <b id="who"></b> (<span id="role"></span>) · <button class="btn" id="out" style="padding:6px 12px">Sign out</button></p>
+    <div class="chips">
+      <button data-kind="message" aria-pressed="true">＋ Message</button>
+      <button data-kind="program" aria-pressed="false">＋ Program</button>
+      <button data-kind="live" aria-pressed="false">＋ Live</button>
+      <button data-kind="list" aria-pressed="false">All items</button>
+    </div>
+    <div id="form"></div>
+  </div>
+</main>
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.44.4";
+const msg = (t) => (document.getElementById("msg").textContent = t);
+let sb = null, role = null;
+try {
+  const cfg = await (await fetch("/api/config")).json();
+  sb = createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+} catch { msg("Cannot reach configuration. Serve over http or check connection."); }
+
+const TOPICS = ["t-faith:Faith", "t-healing:Healing", "t-prayer:Prayer", "t-spirit:Holy Spirit", "t-living:Christian Living", "t-family:Family", "t-purpose:Purpose", "t-evangelism:Evangelism"];
+const PROGRAMS = ["p-healing-streams:Healing Streams", "p-your-loveworld:Your Loveworld", "p-communion:Global Communion"];
+const opt = (arr) => arr.map((t) => `<option value="${t.split(":")[0]}">${t.split(":")[1]}</option>`).join("");
+
+document.getElementById("go").onclick = async () => {
+  msg("Signing in…");
+  const { data, error } = await sb.auth.signInWithPassword({
+    email: document.getElementById("email").value.trim(),
+    password: document.getElementById("pw").value,
+  });
+  if (error) return msg("Couldn't sign in: " + error.message);
+  role = data.user?.app_metadata?.role;
+  if (!["content_admin", "super_admin"].includes(role)) {
+    await sb.auth.signOut();
+    return msg("This account has no admin role. Ask a Super Admin to set app metadata {\"role\":\"content_admin\"}.");
+  }
+  document.getElementById("auth").hidden = true;
+  const panel = document.getElementById("panel");
+  panel.hidden = false;
+  document.getElementById("who").textContent = data.user.email;
+  document.getElementById("role").textContent = role;
+  showForm("message");
+};
+document.getElementById("out").onclick = async () => location.reload();
+document.querySelectorAll("[data-kind]").forEach((b) => (b.onclick = () => {
+  document.querySelectorAll("[data-kind]").forEach((x) => x.setAttribute("aria-pressed", "false"));
+  b.setAttribute("aria-pressed", "true");
+  showForm(b.dataset.kind);
+}));
+
+function field(id, label, extra = "") {
+  return `<label style="display:block;margin:10px 0"><small style="color:var(--faint)">${label}</small>
+    <input id="${id}" class="searchbar" style="margin:4px 0" ${extra}></label>`;
+}
+
+function showForm(kind) {
+  const f = document.getElementById("form");
+  if (kind === "message") {
+    f.innerHTML = field("m-title", "Title") + field("m-desc", "Description") + field("m-speaker", "Speaker", `value="Pastor Chris Oyakhilome"`)
+      + `<label style="display:block;margin:10px 0"><small style="color:var(--faint)">Program</small><select id="m-prog" class="searchbar">${opt(PROGRAMS)}</select></label>`
+      + `<fieldset style="border:1px solid var(--line);border-radius:12px;margin:10px 0"><legend>Topics</legend>${TOPICS.map((t) => `<label style="margin-right:12px"><input type="checkbox" name="topic" value="${t.split(":")[0]}"> ${t.split(":")[1]}</label>`).join("")}</fieldset>`
+      + field("m-dur", "Duration (minutes)", `type="number" value="40"`)
+      + `<div class="rowbtns"><button class="btn primary" id="save">Publish message</button></div><div id="fmsg" style="color:var(--muted)"></div>`;
+    f.querySelector("#save").onclick = async () => {
+      const topics = [...f.querySelectorAll("[name=topic]:checked")].map((x) => x.value);
+      const data = {
+        title: f.querySelector("#m-title").value.trim(),
+        description: f.querySelector("#m-desc").value.trim(),
+        speaker: f.querySelector("#m-speaker").value.trim() || "Pastor Chris Oyakhilome",
+        programId: f.querySelector("#m-prog").value,
+        topicIds: topics,
+        durationSec: (+f.querySelector("#m-dur").value || 40) * 60,
+        publishedAt: new Date().toISOString().slice(0, 10),
+        artwork: "16:9",
+      };
+      if (!data.title || !data.description || !topics.length) return (f.querySelector("#fmsg").textContent = "Title, description, and at least one topic are required.");
+      const { error } = await sb.from("pco_catalog").insert({ kind: "message", data, status: "published" });
+      f.querySelector("#fmsg").textContent = error ? "Failed: " + error.message : "Published ✓ — visible in the app within a minute.";
+    };
+  } else if (kind === "program") {
+    f.innerHTML = field("p-title", "Title") + field("p-desc", "Description")
+      + `<div class="rowbtns"><button class="btn primary" id="save">Publish program</button></div><div id="fmsg" style="color:var(--muted)"></div>`;
+    f.querySelector("#save").onclick = async () => {
+      const data = { title: f.querySelector("#p-title").value.trim(), description: f.querySelector("#p-desc").value.trim(), artwork: "16:9" };
+      if (!data.title || !data.description) return (f.querySelector("#fmsg").textContent = "Title and description are required.");
+      const { error } = await sb.from("pco_catalog").insert({ kind: "program", data, status: "published" });
+      f.querySelector("#fmsg").textContent = error ? "Failed: " + error.message : "Published ✓";
+    };
+  } else if (kind === "live") {
+    f.innerHTML = field("l-title", "Title") + `<label style="display:block;margin:10px 0"><small style="color:var(--faint)">Program</small><select id="l-prog" class="searchbar">${opt(PROGRAMS)}</select></label>`
+      + field("l-when", "Scheduled date/time", `type="datetime-local"`)
+      + `<div class="rowbtns"><button class="btn primary" id="save">Schedule broadcast</button></div><div id="fmsg" style="color:var(--muted)"></div>`;
+    f.querySelector("#save").onclick = async () => {
+      const when = f.querySelector("#l-when").value;
+      const data = { title: f.querySelector("#l-title").value.trim(), programId: f.querySelector("#l-prog").value, scheduledAt: when ? new Date(when).toISOString() : new Date().toISOString(), artwork: "16:9" };
+      if (!data.title || !when) return (f.querySelector("#fmsg").textContent = "Title and date/time are required.");
+      const { error } = await sb.from("pco_catalog").insert({ kind: "live", data, status: "scheduled" });
+      f.querySelector("#fmsg").textContent = error ? "Failed: " + error.message : "Scheduled ✓ — shows under Upcoming.";
+    };
+  } else {
+    f.innerHTML = `<div id="rows"><p style="color:var(--muted)">Loading…</p></div>`;
+    sb.from("pco_catalog").select("id,kind,status,created_at,data").order("created_at", { ascending: false }).limit(50)
+      .then(({ data, error }) => {
+        if (error) return (f.querySelector("#rows").innerHTML = "Failed: " + error.message);
+        f.querySelector("#rows").innerHTML = data.map((r) =>
+          `<div class="comment"><b>${r.data.title || r.id}</b> <small>${r.kind} · ${r.status}</small>
+          <div class="rowbtns"><button class="btn" data-arch="${r.id}">${r.status === "archived" ? "Unarchive" : "Archive"}</button></div></div>`).join("") || "Nothing yet.";
+        f.querySelectorAll("[data-arch]").forEach((b) => (b.onclick = async () => {
+          const row = data.find((x) => String(x.id) === b.dataset.arch);
+          await sb.from("pco_catalog").update({ status: row.status === "archived" ? "published" : "archived" }).eq("id", row.id);
+          showForm("list");
+        }));
+      });
+  }
+}
+</script>
+</body>
+</html>

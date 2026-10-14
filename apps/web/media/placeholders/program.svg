@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="270">
+  <rect width="480" height="270" fill="#101827"/>
+  <rect x="120" y="60" width="240" height="110" rx="12" fill="none" stroke="#7FB2E5" stroke-width="6"/>
+  <rect x="140" y="82" width="200" height="14" rx="7" fill="#7FB2E5" opacity="0.7"/>
+  <rect x="140" y="106" width="150" height="14" rx="7" fill="#7FB2E5" opacity="0.45"/>
+  <text x="240" y="222" text-anchor="middle" font-family="Arial,sans-serif" font-size="26" letter-spacing="6" fill="#C9BCA6">PROGRAM</text>
+</svg>

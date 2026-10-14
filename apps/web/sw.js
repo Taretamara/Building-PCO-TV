@@ -1,6 +1,6 @@
 /* PCO TV service worker: app-shell caching + offline fallback (test data ships local). */
-const VERSION = "pco-v21";
-const CORE = ["./index.html", "./styles.css", "./app.js", "./manifest.webmanifest", "./data/seed.json", "./media/manifest.json", "./privacy.html", "./terms.html", "./support.html"];
+const VERSION = "pco-v22";
+const CORE = ["./index.html", "./styles.css", "./app.js", "./manifest.webmanifest", "./data/seed.json", "./media/manifest.json", "./privacy.html", "./terms.html", "./support.html", "./admin.html"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(VERSION).then((c) => c.addAll(CORE)).then(() => self.skipWaiting()));

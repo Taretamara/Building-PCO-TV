@@ -43,3 +43,28 @@ signing in from landing defers until you pick one. Profiles + PIN vaults
 stay local-only by design.
 Shared community (everyone sees everyone) still needs a comments table +
 moderation queue — post-MVP.
+
+## 4. Admin catalog (add content from `admin.html`)
+Run this SQL once (same SQL Editor):
+```sql
+create table if not exists pco_catalog (
+  id bigint generated always as identity primary key,
+  kind text not null,
+  data jsonb not null default '{}',
+  status text not null default 'published',
+  created_at timestamptz default now()
+);
+alter table pco_catalog enable row level security;
+drop policy if exists "public read published" on pco_catalog;
+create policy "public read published" on pco_catalog
+  for select using (status = 'published');
+drop policy if exists "admins write" on pco_catalog;
+create policy "admins write" on pco_catalog
+  for all to authenticated
+  using ((auth.jwt() -> 'app_metadata' ->> 'role') in ('content_admin', 'super_admin'))
+  with check ((auth.jwt() -> 'app_metadata' ->> 'role') in ('content_admin', 'super_admin'));
+```
+Then make yourself admin (no SQL needed): Dashboard → Authentication →
+Users → your user → **⋯ → Edit user** → **App metadata** → set
+`{"role": "super_admin"}` → Save. Open `admin.html` on the site, sign in,
+and publish — items appear in the app within a minute.

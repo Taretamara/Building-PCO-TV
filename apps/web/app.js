@@ -181,30 +181,25 @@ let MANIFEST = { artwork: {}, trailers: {}, previews: {} };
 
 function hashStr(s) { let h = 7; for (const c of s) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; }
 
-/* Generated cover art (offline, deterministic). A real file listed in
-   media/manifest.json always wins — see media/README.md. */
-function artwork(id, title, music) {
+/* Cover art: real files listed in media/manifest.json win; otherwise a
+   branded placeholder per content kind (swap in real photos anytime). */
+function kindOf(id) {
+  if (id.startsWith("l-")) return "live";
+  if (id.startsWith("p-")) return "program";
+  if (/^(pl|al|a|s)-/.test(id)) return "music";
+  return "message";
+}
+function artwork(id) {
   if (MANIFEST.artwork[id]) return `url("${MANIFEST.artwork[id]}")`;
-  const h = hashStr(id) % 360, h2 = (h + (music ? 70 : 45)) % 360;
-  const initial = (title || "?").trim()[0].toUpperCase();
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="480" height="270">` +
-    `<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">` +
-    `<stop offset="0" stop-color="hsl(${h},45%,32%)"/><stop offset="1" stop-color="hsl(${h2},50%,18%)"/></linearGradient></defs>` +
-    `<rect width="480" height="270" fill="url(#g)"/>` +
-    `<circle cx="400" cy="40" r="120" fill="hsl(${h2},60%,40%)" opacity="0.35"/>` +
-    `<circle cx="60" cy="240" r="90" fill="hsl(${h},60%,45%)" opacity="0.3"/>` +
-    `<text x="36" y="200" font-family="Arial,sans-serif" font-size="150" font-weight="bold" fill="rgba(255,255,255,0.85)">${initial}</text>` +
-    (music ? `<circle cx="420" cy="210" r="34" fill="rgba(0,0,0,0.45)"/><path d="M412 190 L440 210 L412 230 Z" fill="#F2C66B"/>` : ``) +
-    `</svg>`;
-  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+  return `url("media/placeholders/${kindOf(id)}.svg")`;
 }
 
 /* Thumbs carry data-art; hydration sets the picture (keeps templates readable). */
 function hydrateArtwork(root) {
   (root || document).querySelectorAll(".thumb[data-art]").forEach((t) => {
     if (t.dataset.done) return;
-    const [id, title, m] = t.dataset.art.split("‖");
-    t.style.backgroundImage = artwork(id, title, m === "1");
+    const [id] = t.dataset.art.split("‖");
+    t.style.backgroundImage = artwork(id);
     t.classList.add("art");
     t.dataset.done = "1";
   });
@@ -695,7 +690,7 @@ function showTrailer(messageId, anchor) {
   const real = MANIFEST.trailers[messageId];
   const media = real
     ? `<video src="${real}" muted autoplay loop playsinline style="width:100%;aspect-ratio:16/9;object-fit:cover;display:block"></video>`
-    : `<div class="pv-zoom" style="background-image:${artwork(m.id, m.title, false)}"></div>`;
+    : `<div class="pv-zoom" style="background-image:${artwork(m.id)}"></div>`;
   const box = shellOverlay(`
     ${media}
     <div class="pv-meta"><b>${m.title}</b>
@@ -849,14 +844,40 @@ Promise.all([
     localStorage.removeItem("pco.pendingPremium");
     scheduleSync();
   }
+/* Cloud catalog: admin-published items (pco_catalog) merge into the local
+   seed library at boot. Offline or unconfigured → seed only. */
+async function mergeCloudCatalog() {
+  try {
+    const sb = await sbClient();
+    if (!sb) return;
+    const { data, error } = await sb.from("pco_catalog").select("id,kind,data").eq("status", "published").limit(200);
+    if (error || !data) return;
+    for (const row of data) {
+      const d = row.data || {};
+      if (row.kind === "message" && d.title && !DB.messages.some((m) => m.id === `c-${row.id}`)) {
+        DB.messages.push({
+          id: `c-${row.id}`, title: d.title, description: d.description || "",
+          speaker: d.speaker || "Pastor Chris Oyakhilome", programId: d.programId || "p-your-loveworld",
+          topicIds: d.topicIds || [], publishedAt: d.publishedAt || new Date().toISOString().slice(0, 10),
+          durationSec: d.durationSec || 2400, artwork: "16:9", status: "published",
+        });
+      } else if (row.kind === "program" && d.title && !DB.programs.some((p) => p.id === `c-${row.id}`)) {
+        DB.programs.push({ id: `c-${row.id}`, slug: `c-${row.id}`, title: d.title, description: d.description || "", artwork: "16:9" });
+      } else if (row.kind === "live" && d.title && !DB.live.some((l) => l.id === `c-${row.id}`)) {
+        const upcoming = d.scheduledAt && Date.parse(d.scheduledAt) > Date.now();
+        DB.live.push({ id: `c-${row.id}`, title: d.title, status: upcoming ? "scheduled" : "live", scheduledAt: d.scheduledAt || new Date().toISOString(), programId: d.programId || "p-your-loveworld", artwork: "16:9" });
+      }
+    }
+  } catch { /* offline — seed library stands alone */ }
+}
+
   updateOnline();
   ensureAvatar();
   ensureTvButton();
   setupInstallButton();
   initAnalytics();
   sbClient().then(() => paintAccount());
-  bootRoute();
-  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+  mergeCloudCatalog().then(() => bootRoute());
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 }).catch(() => {
   document.getElementById("screen").innerHTML =

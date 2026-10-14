@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="270">
+  <rect width="480" height="270" fill="#1c150e"/>
+  <circle cx="400" cy="40" r="110" fill="#D9A441" opacity="0.18"/>
+  <circle cx="70" cy="235" r="80" fill="#D9A441" opacity="0.12"/>
+  <circle cx="240" cy="118" r="52" fill="none" stroke="#D9A441" stroke-width="6" opacity="0.9"/>
+  <path d="M230 92 L262 118 L230 144 Z" fill="#F2C66B"/>
+  <text x="240" y="212" text-anchor="middle" font-family="Arial,sans-serif" font-size="26" letter-spacing="6" fill="#C9BCA6">MESSAGE</text>
+</svg>
