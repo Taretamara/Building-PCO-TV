@@ -1345,10 +1345,16 @@ async function enterTvMode() {
   TV.connected = false;
   TV.channel = sb.channel(`pco-tv-${TV.code}`);
   TV.channel.on("broadcast", { event: "cmd" }, ({ payload }) => tvCommand(payload));
-  const status = await TV.channel.subscribe();
+  let status = "unknown";
+  try {
+    status = await TV.channel.subscribe();
+  } catch (e) {
+    status = "error";
+  }
   if (status !== "SUBSCRIBED") {
+    console.warn("[tv] live channel failed:", status);
     TV.active = false;
-    openSheet("📺 TV mode", `<p style="color:var(--muted)">Couldn't open the live channel (${esc(status)}). In Supabase run the <b>Realtime policy</b> SQL from <code>docs/SUPABASE.md</code>, then try again.</p>`);
+    openSheet("📺 TV mode", `<p style="color:var(--muted)">Couldn't connect to the TV link. Check your internet connection and try again.</p>`);
     return;
   }
   renderTvScreen();
@@ -1456,7 +1462,17 @@ async function openTvRemote() {
     if (!sb) { msg.textContent = "Needs internet + configured accounts."; return; }
     try { await RC?.unsubscribe(); } catch { /* noop */ }
     RC = sb.channel(`pco-tv-${code}`);
-    await RC.subscribe();
+    let st = "unknown";
+    try {
+      st = await RC.subscribe();
+    } catch { st = "error"; }
+    if (st !== "SUBSCRIBED") {
+      console.warn("[tv] remote join failed:", st);
+      msg.textContent = "Couldn't reach that TV. Check the code and connection, then try again.";
+      try { await RC?.unsubscribe(); } catch { /* noop */ }
+      RC = null;
+      return;
+    }
     remoteUI(code);
   };
 }
