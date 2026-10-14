@@ -1335,7 +1335,12 @@ async function enterTvMode() {
   TV.connected = false;
   TV.channel = sb.channel(`pco-tv-${TV.code}`);
   TV.channel.on("broadcast", { event: "cmd" }, ({ payload }) => tvCommand(payload));
-  await TV.channel.subscribe();
+  const status = await TV.channel.subscribe();
+  if (status !== "SUBSCRIBED") {
+    TV.active = false;
+    openSheet("📺 TV mode", `<p style="color:var(--muted)">Couldn't open the live channel (${esc(status)}). In Supabase run the <b>Realtime policy</b> SQL from <code>docs/SUPABASE.md</code>, then try again.</p>`);
+    return;
+  }
   renderTvScreen();
 }
 

@@ -11,6 +11,12 @@ alter table pco_data enable row level security;
 drop policy if exists "owners only" on pco_data;
 create policy "owners only" on pco_data
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- TV companion mode: allow the app's live pairing channels (open codes only,
+-- no user data flows here; same anonymous access as the public anon key).
+drop policy if exists "pco tv broadcast" on realtime.messages;
+create policy "pco tv broadcast" on realtime.messages
+  for all to anon, authenticated using (true) with check (true);
 ```
 
 ## 2. Email sign-in without friction (demo)
