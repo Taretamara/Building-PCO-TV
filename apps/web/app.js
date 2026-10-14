@@ -841,6 +841,7 @@ Promise.all([
   }
   updateOnline();
   ensureAvatar();
+  ensureTvButton();
   setupInstallButton();
   initAnalytics();
   sbClient().then(() => paintAccount());
@@ -1309,6 +1310,176 @@ async function authAction(mode) {
   } catch (e) {
     if (msg) msg.textContent = "Couldn't sign in: " + (e.message || "offline?");
   }
+}
+
+/* ---- TV companion mode: TV displays, phone is the remote ----
+   TV opens TV mode and shows a 6-letter code. Phone enters the code and
+   sends commands over a Supabase Realtime broadcast channel (pco-tv-CODE).
+   No new vendor, no pairing accounts. TV enforces the same signup gate. */
+let TV = { active: false, code: "", channel: null, connected: false, focusIdx: 0 };
+
+function tvCode() {
+  const abc = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+  return Array.from({ length: 6 }, () => abc[Math.floor(Math.random() * abc.length)]).join("");
+}
+
+async function enterTvMode() {
+  stopPreview();
+  const sb = await sbClient();
+  if (!sb) {
+    openSheet("📺 TV mode", `<p style="color:var(--muted)">TV mode needs internet and configured accounts (same setup as sign-in). Then try again.</p>`);
+    return;
+  }
+  TV.active = true;
+  TV.code = tvCode();
+  TV.connected = false;
+  TV.channel = sb.channel(`pco-tv-${TV.code}`);
+  TV.channel.on("broadcast", { event: "cmd" }, ({ payload }) => tvCommand(payload));
+  await TV.channel.subscribe();
+  renderTvScreen();
+}
+
+function exitTvMode() {
+  TV.active = false;
+  try { TV.channel?.unsubscribe(); } catch { /* noop */ }
+  TV.channel = null;
+  render();
+}
+
+function renderTvScreen() {
+  const s = document.getElementById("screen");
+  s.innerHTML = "";
+  const w = el(`<div style="text-align:center;padding:36px 0;max-width:720px;margin:0 auto">
+    <div class="kicker">PCO TV · TV MODE ${TV.connected ? "· CONNECTED ✓" : "· WAITING FOR PHONE…"}</div>
+    <h1 style="font-size:clamp(30px,6vw,52px);margin:12px 0">Turn on. Find something meaningful. Watch.</h1>
+    <div style="font-size:56px;font-weight:800;letter-spacing:14px;color:var(--gold);margin:10px 0" aria-label="Pairing code">${TV.code}</div>
+    <p style="color:var(--muted);font-size:17px">On your phone: open PCO TV → tap <b>📺 TV</b> → <b>Control a TV</b> → enter this code.<br>Then drive this screen from the phone. Same signup rules apply here.</p>
+    <div class="rowbtns" style="justify-content:center"><button class="btn" id="tv-exit">Exit TV mode</button></div>
+    <div id="tv-stage" style="margin-top:18px;text-align:left"></div></div>`);
+  s.append(w);
+  w.querySelector("#tv-exit").onclick = exitTvMode;
+  window.scrollTo(0, 0);
+}
+
+/* Commands from the phone. Focus moves for D-pad; content actions reuse the app. */
+function tvCommand(cmd) {
+  if (!TV.active || !cmd || typeof cmd.t !== "string") return;
+  TV.connected = true;
+  const stage = document.getElementById("tv-stage");
+  const focusables = () => [...document.querySelectorAll("#screen button, .nav button")].filter((b) => b.offsetParent !== null);
+  switch (cmd.t) {
+    case "tab":
+      if (TABS.includes(cmd.id)) { tab = cmd.id; render(); renderTvChrome(); }
+      break;
+    case "detail":
+      openDetail(cmd.id);
+      break;
+    case "play":
+      playTrack(cmd.id, true);
+      break;
+    case "pause":
+      document.getElementById("player").hidden = true;
+      break;
+    case "back":
+      render(); renderTvChrome();
+      break;
+    case "move": {
+      const items = focusables();
+      if (!items.length) break;
+      TV.focusIdx = ((TV.focusIdx + (cmd.dir === 1 ? 1 : -1)) % items.length + items.length) % items.length;
+      items[TV.focusIdx].focus();
+      items[TV.focusIdx].scrollIntoView({ block: "nearest" });
+      break;
+    }
+    case "ok": {
+      const items = focusables();
+      if (items[TV.focusIdx]) items[TV.focusIdx].click();
+      break;
+    }
+  }
+  void stage;
+}
+
+/* Re-render content under the TV chrome after tab/back commands. */
+function renderTvChrome() {
+  if (!TV.active) return;
+  const code = TV.code, connected = TV.connected;
+  render();
+  const s = document.getElementById("screen");
+  const bar = el(`<div style="text-align:center;padding:10px;border:1px solid var(--line);border-radius:12px;margin-bottom:8px">
+    <span class="kicker">TV MODE · CODE ${code} ${connected ? "· CONNECTED ✓" : ""}</span>
+    <div class="rowbtns" style="justify-content:center;margin-top:6px"><button class="btn" id="tv-exit2">Exit TV mode</button></div></div>`);
+  s.prepend(bar);
+  bar.querySelector("#tv-exit2").onclick = exitTvMode;
+}
+
+function ensureTvButton() {
+  if (document.getElementById("tv-btn")) return;
+  const b = el(`<button id="tv-btn" aria-label="TV mode">📺 TV</button>`);
+  b.style.cssText = "margin-left:8px;background:var(--surface2);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:9px 12px;font-size:15px";
+  b.onclick = openTvRemote;
+  document.querySelector(".nav").insertBefore(b, document.getElementById("install"));
+}
+
+let RC = null; // remote channel
+async function openTvRemote() {
+  openSheet("📺 TV", `
+    <div class="rowbtns"><button class="btn primary" id="tv-host">Show TV code (this is the TV)</button></div>
+    <div style="margin-top:16px"><b>Control a TV</b>
+    <p style="color:var(--muted);font-size:14px">Enter the 6-letter code shown on the TV screen.</p>
+    <input id="tv-code" class="searchbar" placeholder="ABC123" maxlength="6" style="text-transform:uppercase" aria-label="TV code">
+    <div class="rowbtns"><button class="btn primary" id="tv-join">Connect</button></div>
+    <div id="tv-msg" style="color:var(--muted);font-size:14px;margin-top:8px"></div></div>`);
+  const d = document.getElementById("screen");
+  d.querySelector("#tv-host").onclick = enterTvMode;
+  d.querySelector("#tv-join").onclick = async () => {
+    const code = (d.querySelector("#tv-code").value || "").trim().toUpperCase();
+    const msg = d.querySelector("#tv-msg");
+    if (!/^[A-Z2-9]{6}$/.test(code)) { msg.textContent = "Enter the 6-letter code from the TV."; return; }
+    msg.textContent = "Connecting…";
+    const sb = await sbClient();
+    if (!sb) { msg.textContent = "Needs internet + configured accounts."; return; }
+    try { await RC?.unsubscribe(); } catch { /* noop */ }
+    RC = sb.channel(`pco-tv-${code}`);
+    await RC.subscribe();
+    remoteUI(code);
+  };
+}
+
+function sendCmd(cmd) {
+  if (!RC) return;
+  RC.send({ type: "broadcast", event: "cmd", payload: cmd });
+}
+
+function remoteUI(code) {
+  openSheet(`📺 Remote · ${code}`, `
+    <div class="rpad">
+      <div></div><button data-rc="up">▲</button><div></div>
+      <button data-rc="left">◀</button><button data-rc="ok">OK</button><button data-rc="right">▶</button>
+      <div></div><button data-rc="down">▼</button><div></div>
+    </div>
+    <div class="chips" style="justify-content:center">
+      ${TABS.map((t) => `<button data-rtab="${t}">${t}</button>`).join("")}
+    </div>
+    <div class="rowbtns" style="justify-content:center">
+      <button class="btn" data-rc="pause">⏸ Pause TV</button>
+      <button class="btn" data-rc="back">← Back</button>
+      <button class="btn" id="rc-off">Disconnect</button>
+    </div>
+    <p style="color:var(--muted);font-size:13px;text-align:center">Drive the TV: move + OK to browse, tabs to jump, Back to go back.</p>`);
+  const d = document.getElementById("screen");
+  d.querySelectorAll("[data-rc]").forEach((b) => (b.onclick = () => {
+    const k = b.dataset.rc;
+    if (k === "up" || k === "left") sendCmd({ t: "move", dir: -1 });
+    else if (k === "down" || k === "right") sendCmd({ t: "move", dir: 1 });
+    else sendCmd({ t: k });
+  }));
+  d.querySelectorAll("[data-rtab]").forEach((b) => (b.onclick = () => sendCmd({ t: "tab", id: b.dataset.rtab })));
+  d.querySelector("#rc-off").onclick = async () => {
+    try { await RC?.unsubscribe(); } catch { /* noop */ }
+    RC = null;
+    render();
+  };
 }
 
 /* ---- Landing + persistent session (Netflix-style: log in once, stay in) ---- */

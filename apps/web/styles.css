@@ -63,6 +63,8 @@ h2 small{color:var(--faint);font-weight:400}
 .pinpad{display:grid;grid-template-columns:repeat(3,84px);gap:10px;justify-content:center;margin:14px 0}
 .pinpad button{background:var(--surface2);border:1px solid var(--line);color:var(--text);border-radius:50%;width:84px;height:84px;font-size:24px}
 .legal-footer{text-align:center;color:var(--faint);font-size:13px;padding:18px 0 90px}
+.rpad{display:grid;grid-template-columns:repeat(3,72px);gap:8px;justify-content:center;margin:16px 0}
+.rpad button{background:var(--surface2);border:1px solid var(--line);color:var(--text);border-radius:14px;height:56px;font-size:18px}
 .legal-footer a{color:var(--muted)}
 .kicker{color:var(--gold2);font-size:12px;letter-spacing:.18em;text-transform:uppercase}
 main h1{font-size:30px}main h2{font-size:19px;margin-top:26px}main p{line-height:1.55}
