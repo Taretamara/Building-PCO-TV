@@ -263,8 +263,7 @@ function Home(s) {
     <div class="rowbtns"><button class="btn primary" id="hero-play">▶ Continue Watching</button>
     ${premium ? "" : `<button class="btn" id="hero-sub">★ Subscribe — ₦1,500/mo (test)</button>`}</div></div>`);
   s.append(hero);
-  const banner = installBanner();
-  if (banner) s.append(banner);
+  installPopup();
   hero.querySelector("#hero-play").onclick = () => cwIds.length && openDetail(cwIds[0]);
   const subBtn = hero.querySelector("#hero-sub");
   if (subBtn) subBtn.onclick = openSubscribe;
@@ -813,17 +812,28 @@ function setupInstallButton() {
   b.onclick = openInstallGuide;
 }
 
-function installBanner() {
-  if (localStorage.getItem("pco.installDismissed") === "1") return null;
-  if (isInstalled()) return null;
-  const bar = el(`<div class="install-banner"><div><b>📲 Get the PCO TV app</b><div>Icon, fullscreen, works offline — free.</div></div>
-    <div class="rowbtns"><button class="btn primary" id="ib-go">Install</button><button class="btn" id="ib-no">Later</button></div></div>`);
-  bar.querySelector("#ib-go").onclick = openInstallGuide;
-  bar.querySelector("#ib-no").onclick = () => {
-    localStorage.setItem("pco.installDismissed", "1");
-    bar.remove();
-  };
-  return bar;
+/* Install suggestion popup: appears once per visit, stays 5s, ✕ to dismiss.
+   After cancel it never nags again this visit — the nav "Install app"
+   button stays as the quiet, easy-to-find entry point. */
+const INSTALL_SHOW_MS = 5000;
+function installPopup() {
+  if (isInstalled()) return;
+  if (sessionStorage.getItem("pco.installShown") === "1") return;
+  sessionStorage.setItem("pco.installShown", "1");
+  setTimeout(() => {
+    if (document.getElementById("install-toast") || isInstalled()) return;
+    const toast = el(`<div id="install-toast" class="install-toast" role="dialog" aria-label="Install app suggestion">
+      <button id="it-x" aria-label="Dismiss">✕</button>
+      <div><b>📲 Get the PCO TV app</b><div>Icon, fullscreen, works offline — free.</div>
+      <div class="toast-bar"><i></i></div></div>
+      <button class="btn primary" id="it-go">Install</button></div>`);
+    document.body.append(toast);
+    toast.querySelector(".toast-bar i").style.animationDuration = `${INSTALL_SHOW_MS}ms`;
+    const done = () => toast.remove();
+    toast.querySelector("#it-x").onclick = done;
+    toast.querySelector("#it-go").onclick = () => { done(); openInstallGuide(); };
+    setTimeout(() => { toast.classList.add("leaving"); setTimeout(done, 300); }, INSTALL_SHOW_MS);
+  }, 1500);
 }
 
 Promise.all([
