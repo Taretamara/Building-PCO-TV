@@ -378,8 +378,8 @@ function card(m, badge) {
   const p = store.progress[m.id];
   const pct = p ? Math.round((p.pos / m.durationSec) * 100) : 0;
   return el(`<button class="card" data-open="${m.id}" data-pv="msg:${m.id}">
-    ${thumb(m.id, m.title, false, badge ? `<span class="badge ${badge === "NEW" ? "new" : ""}">${badge}</span>` : "")}
-    <div class="meta"><b>${m.title}</b><div>${m.speaker} · ${mins(m.durationSec)}</div>
+    ${thumb(m.id, m.title, false, `${badge ? `<span class="badge ${badge === "NEW" ? "new" : ""}">${badge}</span>` : ""}<span class="dur">${mins(m.durationSec)}</span>`)}
+    <div class="meta"><b>${m.title}</b><div>${m.speaker}</div>
     ${pct ? `<div class="progress"><i style="width:${pct}%"></i></div>` : ""}</div></button>`);
 }
 const rail = (title, sub, nodes) => {
@@ -406,6 +406,9 @@ function render() {
   s.innerHTML = "";
   ({ Home, Messages, Music, Live, Programs, Favorites, Community, Search })[tab](s);
   s.querySelectorAll("[data-open]").forEach((b) => (b.onclick = () => openDetail(b.dataset.open)));
+  s.classList.remove("rising");
+  void s.offsetWidth;
+  s.classList.add("rising");
   hydrateArtwork(s);
   wirePreviews(s);
 }
@@ -417,12 +420,26 @@ function Home(s) {
   const premium = isPremium();
   const who = activeProfile()?.name.toUpperCase() || "FRIEND";
   const guest = !SB_USER;
-  const hero = el(`<div class="hero slim"><div class="kicker">${guest ? "PCO TV" : `WELCOME BACK, ${who}`} ${premium ? "· ★ PREMIUM" : ""}</div>
-    <div class="rowbtns"><button class="btn primary" id="hero-play">▶ ${t("Continue Watching")}</button>
+  const feat = recent.find((m) => m.featuredRank != null) || recent[0];
+  const hero = el(`<div class="hero feature">
+    <div class="kicker">${guest ? "PCO TV · FEATURED" : `WELCOME BACK, ${who}`} ${premium ? "· ★ PREMIUM" : ""}</div>
+    ${feat ? `<div class="hero-title">${esc(feat.title)}</div>
+    <div class="hero-meta">${esc(feat.speaker)} · ${mins(feat.durationSec)}</div>` : ""}
+    <div class="rowbtns"><button class="btn primary" id="hero-play">▶ ${t("Play")}</button>
+    ${feat ? `<button class="btn" id="hero-info">ⓘ Details</button>` : ""}
     ${premium ? "" : `<button class="btn" id="hero-sub">★ Subscribe</button>`}</div></div>`);
   s.append(hero);
+  if (feat) {
+    hero.style.backgroundImage = `${artwork(feat.id)}, linear-gradient(100deg,rgba(14,12,10,.88),rgba(14,12,10,.25))`;
+    hero.style.backgroundSize = "cover";
+    hero.style.backgroundPosition = "center";
+  }
   installPopup();
-  hero.querySelector("#hero-play").onclick = () => cwIds.length && openDetail(cwIds[0]);
+  hero.querySelector("#hero-play").onclick = () => {
+    if (cwIds.length) openDetail(cwIds[0]);
+    else if (feat) playTrack(feat.id, true);
+  };
+  hero.querySelector("#hero-info")?.addEventListener("click", () => feat && openDetail(feat.id));
   const subBtn = hero.querySelector("#hero-sub");
   if (subBtn) subBtn.onclick = openBilling;
   if (cwIds.length) {
