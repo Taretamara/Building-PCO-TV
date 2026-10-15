@@ -263,9 +263,10 @@ function Home(s) {
   const cwIds = Object.keys(store.progress);
   const premium = isPremium();
   const who = activeProfile()?.name.toUpperCase() || "FRIEND";
-  const hero = el(`<div class="hero"><div class="kicker">WELCOME BACK, ${who} ${premium ? "· ★ PREMIUM" : ""}</div>
+  const guest = !SB_USER;
+  const hero = el(`<div class="hero${guest ? " compact" : ""}"><div class="kicker">${guest ? "PCO TV" : `WELCOME BACK, ${who}`} ${premium ? "· ★ PREMIUM" : ""}</div>
     <h1>Turn on. Find something meaningful. Watch.</h1>
-    <p>Pastor Chris messages, LoveWorld music, and live programming.</p>
+    ${guest ? "" : `<p>Pastor Chris messages, LoveWorld music, and live programming.</p>`}
     <div class="rowbtns"><button class="btn primary" id="hero-play">▶ Continue Watching</button>
     ${premium ? "" : `<button class="btn" id="hero-sub">★ Subscribe — plans from ₦1,500/mo (test)</button>`}</div></div>`);
   s.append(hero);
@@ -761,8 +762,8 @@ window.addEventListener("scroll", () => {
   const y = window.scrollY || 0;
   const nav = document.querySelector(".nav");
   if (!nav) return;
-  if (y > 140 && y > lastY + 4) nav.classList.add("nav-hidden");
-  else if (y < lastY - 4 || y <= 140) nav.classList.remove("nav-hidden");
+  if (y > 8 && y > lastY + 2) nav.classList.add("nav-hidden");
+  else if (y < lastY - 2 || y <= 8) nav.classList.remove("nav-hidden");
   lastY = y;
 }, { passive: true });
 
@@ -1459,11 +1460,8 @@ function renderTvChrome() {
 }
 
 function ensureTvButton() {
-  if (document.getElementById("tv-btn")) return;
-  const b = el(`<button id="tv-btn" aria-label="TV mode">📺 TV</button>`);
-  b.style.cssText = "margin-left:8px;background:var(--surface2);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:9px 12px;font-size:15px";
-  b.onclick = openTvRemote;
-  document.querySelector(".nav").insertBefore(b, document.getElementById("install"));
+  // TV lives in the sidebar only — no header button (keeps the bar clean).
+  document.getElementById("tv-btn")?.remove();
 }
 
 let RC = null; // remote channel
@@ -1561,9 +1559,6 @@ function ensureDrawer() {
     <button data-go="signin" id="drawer-signin">🔑 Sign In</button>
     <button data-go="tv">📺 TV mode</button>
     <button data-go="install">📲 Install app</button>
-    <a href="support.html">Support</a>
-    <a href="privacy.html">Privacy</a>
-    <a href="terms.html">Terms</a>
   </aside>`);
   document.body.append(d);
   d.querySelector("#drawer-x").onclick = closeDrawer;
