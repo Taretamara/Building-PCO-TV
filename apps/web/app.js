@@ -305,9 +305,9 @@ const rail = (title, sub, nodes) => {
 function renderTabs() {
   const nav = document.getElementById("tabs");
   nav.innerHTML = "";
-  TABS.forEach((t) => {
-    const b = el(`<button role="tab" aria-selected="${t === tab}">${t(t)}</button>`);
-    b.onclick = () => { tab = t; track("tab_view", { tab: t }); render(); window.scrollTo(0, 0); };
+  TABS.forEach((name) => {
+    const b = el(`<button role="tab" aria-selected="${name === tab}">${t(name)}</button>`);
+    b.onclick = () => { tab = name; track("tab_view", { tab: name }); render(); window.scrollTo(0, 0); };
     nav.append(b);
   });
 }
