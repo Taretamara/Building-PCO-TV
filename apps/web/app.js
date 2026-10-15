@@ -1777,37 +1777,27 @@ function renderLanding() {
   stopPreview();
   const s = document.getElementById("screen");
   s.innerHTML = "";
-  const w = el(`<div style="text-align:center;padding:48px 0 30px;max-width:640px;margin:0 auto">
+  const w = el(`<div style="text-align:center;padding:48px 0 30px;max-width:420px;margin:0 auto">
     <div class="logo" style="font-size:34px">PCO <span>TV</span></div>
-    <h1 style="font-size:clamp(30px,6vw,46px);margin:14px 0 6px">Turn on. Find something meaningful. Watch.</h1>
-    <p style="color:var(--muted);font-size:17px">Messages, music, and live for the whole family.</p>
-    <div class="rowbtns" style="justify-content:center;margin-top:18px">
-      <button class="btn primary" id="land-go" style="font-size:17px;padding:14px 34px">Sign In</button>
-      <button class="btn" id="land-browse" style="font-size:17px;padding:14px 26px">Browse first →</button>
-    </div>
-    <label style="display:block;margin-top:14px;color:var(--muted);font-size:14px">
-      <input type="checkbox" id="land-remember" ${isRemember() ? "checked" : ""}> Keep me signed in on this device</label>
-    <div class="detail" style="margin-top:22px;text-align:left">
-      <b>👤 Account (syncs across devices)</b>
-      <p style="color:var(--muted);font-size:14px">Optional. Without it, everything stays on this device only.</p>
+    <div style="margin-top:22px;text-align:left">
       <input id="acc-email" class="searchbar" type="email" placeholder="you@example.com" aria-label="Email">
       <input id="acc-pw" class="searchbar" type="password" placeholder="Password (6+ characters)" aria-label="Password">
-      <div class="rowbtns"><button class="btn primary" id="acc-in">Sign in</button>
-      <button class="btn" id="acc-up">Create account</button></div>
+      <div class="rowbtns"><button class="btn primary" id="acc-in" style="flex:1">Sign in</button>
+      <button class="btn" id="acc-up" style="flex:1">Create account</button></div>
       <div style="margin-top:8px"><a href="reset.html" style="color:var(--muted);font-size:14px">Forgot password?</a></div>
       <div id="acc-msg" style="color:var(--muted);font-size:14px;margin-top:8px"></div>
     </div>
-    <div class="chips" style="justify-content:center;margin-top:22px">
-      <span class="amen">🎙 Messages</span><span class="amen">🎵 Music</span><span class="amen">🔴 Live</span>
+    <label style="display:block;margin-top:14px;color:var(--muted);font-size:14px">
+      <input type="checkbox" id="land-remember" ${isRemember() ? "checked" : ""}> Keep me signed in</label>
+    <div class="rowbtns" style="justify-content:center;margin-top:14px">
+      <button class="btn" id="land-browse">Browse first →</button>
     </div>
-    <p style="color:var(--faint);font-size:12px;margin-top:22px">Demo build · test data · profiles + PINs live on this device only.</p>
   </div>`);
   s.append(w);
   w.querySelector("#land-remember").onchange = (e) => {
     localStorage.setItem("pco.remember", e.target.checked ? "1" : "0");
     if (!e.target.checked) localStorage.removeItem("pco.session");
   };
-  w.querySelector("#land-go").onclick = renderPicker;
   w.querySelector("#land-browse").onclick = browseAsGuest;
   w.querySelector("#acc-in").onclick = () => authAction("in");
   w.querySelector("#acc-up").onclick = () => authAction("up");
