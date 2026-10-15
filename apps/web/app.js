@@ -1,5 +1,71 @@
 /* PCO TV PWA — test-data app. Device profiles, no accounts, no backend. */
 const TABS = ["Home", "Messages", "Music", "Live", "Programs", "Favorites", "Community", "Search"];
+
+/* UI language: English, Français, Español. Content (titles, descriptions)
+   stays in English for now — chrome translates, catalog follows later. */
+const I18N = {
+  en: {},
+  fr: {
+    "Home": "Accueil", "Messages": "Messages", "Music": "Musique", "Live": "En direct",
+    "Programs": "Programmes", "Favorites": "Favoris", "Community": "Communauté", "Search": "Recherche",
+    "Continue Watching": "Continuer", "Live Now": "En direct", "Pastor Chris": "Pasteur Chris",
+    "LoveWorld Music": "Musique LoveWorld", "Recommended for You": "Pour vous",
+    "Recently Added": "Récents", "Popular": "Populaires", "Upcoming": "À venir",
+    "Recently Live": "Récents en direct", "Playlists": "Listes", "Artists": "Artistes",
+    "Related": "Similaires", "Keep watching": "Continuer",
+    "▶ Continue Watching": "▶ Continuer", "▶ Play": "▶ Lire", "▶ Resume": "▶ Reprendre",
+    "♡ Favorite": "♡ Favori", "♥ Favorited": "♥ Favori ✓", "Save for Later": "À voir",
+    "Saved ✓": "Sauvé ✓", "Follow program": "Suivre", "Unfollow": "Ne plus suivre",
+    "★ Subscribe": "★ S'abonner", "Install": "Installer", "Later": "Plus tard",
+    "Back": "← Retour", "Search messages, programs, music, artists": "Rechercher messages, programmes, musique, artistes",
+    "Nothing is live right now.": "Rien en direct pour le moment.",
+    "Nothing here yet. Tap ♥ on anything you love.": "Rien ici. Touchez ♥ sur ce que vous aimez.",
+    "No reflections yet — share the first one below. What did you learn?": "Aucune réaction — partagez la première. Qu'avez-vous appris ?",
+    "Share what you learnt…": "Partagez ce que vous avez appris…",
+    "Post reflection": "Publier", "What did you learn?": "Qu'avez-vous appris ?",
+    "Billing": "Facturation", "Settings": "Réglages", "Account": "Compte",
+    "Sign In": "Se connecter", "TV mode": "Mode TV", "Install app": "Installer l'app",
+    "Sign out (log in again next visit)": "Se déconnecter",
+    "Language": "Langue", "Brightness": "Luminosité", "Appearance": "Apparence",
+    "Monthly": "Mensuel", "Quarterly": "Trimestriel", "Annual": "Annuel",
+    "Play": "Lire", "Resume": "Reprendre", "Play All": "Tout lire", "Follow": "Suivre",
+    "Following": "Suivi ✓", "Favorites": "Favoris", "Save for Later": "À voir plus tard",
+    "No results for": "Aucun résultat pour", "Choose your profile": "Choisissez votre profil",
+    "What the family learnt": "Ce que la famille a appris",
+    "Continue to checkout": "Continuer au paiement", "Cancel auto-renew": "Annuler le renouvellement",
+  },
+  es: {
+    "Home": "Inicio", "Messages": "Mensajes", "Music": "Música", "Live": "En vivo",
+    "Programs": "Programas", "Favorites": "Favoritos", "Community": "Comunidad", "Search": "Buscar",
+    "Continue Watching": "Seguir viendo", "Live Now": "Ahora en vivo", "Pastor Chris": "Pastor Chris",
+    "LoveWorld Music": "Música LoveWorld", "Recommended for You": "Para ti",
+    "Recently Added": "Recién añadido", "Popular": "Populares", "Upcoming": "Próximos",
+    "Recently Live": "Recientes en vivo", "Playlists": "Listas", "Artists": "Artistas",
+    "Related": "Similares", "Keep watching": "Seguir viendo",
+    "▶ Continue Watching": "▶ Seguir viendo", "▶ Play": "▶ Ver", "▶ Resume": "▶ Continuar",
+    "♡ Favorite": "♡ Favorito", "♥ Favorited": "♥ Favorito ✓", "Save for Later": "Ver más tarde",
+    "Saved ✓": "Guardado ✓", "Follow program": "Seguir programa", "Unfollow": "Dejar de seguir",
+    "★ Subscribe": "★ Suscribirse", "Install": "Instalar", "Later": "Después",
+    "Back": "← Atrás", "Search messages, programs, music, artists": "Buscar mensajes, programas, música, artistas",
+    "Nothing is live right now.": "Nada en vivo ahora mismo.",
+    "Nothing here yet. Tap ♥ on anything you love.": "Nada aquí. Toca ♥ en lo que ames.",
+    "No reflections yet — share the first one below. What did you learn?": "Sin reflexiones — comparte la primera. ¿Qué aprendiste?",
+    "Share what you learnt…": "Comparte lo que aprendiste…",
+    "Post reflection": "Publicar", "What did you learn?": "¿Qué aprendiste?",
+    "Billing": "Facturación", "Settings": "Ajustes", "Account": "Cuenta",
+    "Sign In": "Iniciar sesión", "TV mode": "Modo TV", "Install app": "Instalar app",
+    "Sign out (log in again next visit)": "Cerrar sesión",
+    "Language": "Idioma", "Brightness": "Brillo", "Appearance": "Apariencia",
+    "Monthly": "Mensual", "Quarterly": "Trimestral", "Annual": "Anual",
+    "Play": "Ver", "Resume": "Continuar", "Play All": "Reproducir todo", "Follow": "Seguir",
+    "Following": "Siguiendo ✓", "Favorites": "Favoritos", "Save for Later": "Ver más tarde",
+    "No results for": "Sin resultados para", "Choose your profile": "Elige tu perfil",
+    "What the family learnt": "Lo que aprendió la familia",
+    "Continue to checkout": "Continuar al pago", "Cancel auto-renew": "Cancelar renovación",
+  },
+};
+const lang = () => (appSettings().lang && I18N[appSettings().lang] ? appSettings().lang : "en");
+const t = (s) => (I18N[lang()] && I18N[lang()][s]) || s;
 const DEFAULT_PROFILES = [
   { id: "tare", name: "Tare", color: "#D9A441" },
   { id: "mom", name: "Mom", color: "#D9A441" },
@@ -93,7 +159,7 @@ function commentListHtml(msgId) {
   const hiddenCount = total - list.length;
   const hiddenNote = hiddenCount > 0
     ? `<div style="margin:8px 0"><button class="amen" data-unhide="${msgId}">${hiddenCount} hidden by you · Undo</button></div>` : "";
-  if (!list.length && !hiddenCount) return `<div class="empty">No reflections yet — share the first one below. What did you learn?</div>`;
+  if (!list.length && !hiddenCount) return `<div class="empty">${t("No reflections yet — share the first one below. What did you learn?")}</div>`;
   return hiddenNote + list.map((c) => `
     <div class="comment"><b>${esc(c.name)}</b>${c.mine ? ` <small>(you)</small>` : ""}
     <p>${esc(mask(c.text))}</p>
@@ -230,7 +296,7 @@ function card(m, badge) {
     ${pct ? `<div class="progress"><i style="width:${pct}%"></i></div>` : ""}</div></button>`);
 }
 const rail = (title, sub, nodes) => {
-  const s = el(`<section><h2>${title} <small>${sub}</small></h2><div class="rail"></div></section>`);
+  const s = el(`<section><h2>${t(title)}${sub ? ` <small>${sub}</small>` : ""}</h2><div class="rail"></div></section>`);
   const r = s.querySelector(".rail");
   nodes.forEach((n) => r.append(n));
   return s;
@@ -240,7 +306,7 @@ function renderTabs() {
   const nav = document.getElementById("tabs");
   nav.innerHTML = "";
   TABS.forEach((t) => {
-    const b = el(`<button role="tab" aria-selected="${t === tab}">${t}</button>`);
+    const b = el(`<button role="tab" aria-selected="${t === tab}">${t(t)}</button>`);
     b.onclick = () => { tab = t; track("tab_view", { tab: t }); render(); window.scrollTo(0, 0); };
     nav.append(b);
   });
@@ -264,11 +330,9 @@ function Home(s) {
   const premium = isPremium();
   const who = activeProfile()?.name.toUpperCase() || "FRIEND";
   const guest = !SB_USER;
-  const hero = el(`<div class="hero${guest ? " compact" : ""}"><div class="kicker">${guest ? "PCO TV" : `WELCOME BACK, ${who}`} ${premium ? "· ★ PREMIUM" : ""}</div>
-    <h1>Turn on. Find something meaningful. Watch.</h1>
-    ${guest ? "" : `<p>Pastor Chris messages, LoveWorld music, and live programming.</p>`}
-    <div class="rowbtns"><button class="btn primary" id="hero-play">▶ Continue Watching</button>
-    ${premium ? "" : `<button class="btn" id="hero-sub">★ Subscribe — plans from ₦1,500/mo (test)</button>`}</div></div>`);
+  const hero = el(`<div class="hero slim"><div class="kicker">${guest ? "PCO TV" : `WELCOME BACK, ${who}`} ${premium ? "· ★ PREMIUM" : ""}</div>
+    <div class="rowbtns"><button class="btn primary" id="hero-play">▶ ${t("Continue Watching")}</button>
+    ${premium ? "" : `<button class="btn" id="hero-sub">★ Subscribe</button>`}</div></div>`);
   s.append(hero);
   installPopup();
   hero.querySelector("#hero-play").onclick = () => cwIds.length && openDetail(cwIds[0]);
@@ -296,7 +360,7 @@ function Messages(s) {
     b.onclick = () => { topicFilter = t.id || ""; render(); };
     chips.append(b);
   });
-  s.append(el(`<h2>Messages</h2>`), chips);
+  s.append(el(`<h2>${t("Messages")}</h2>`), chips);
   const list = DB.messages.filter((m) => m.status === "published" && (!topicFilter || m.topicIds.includes(topicFilter)));
   const r = el(`<div class="rail" style="grid-auto-flow:row;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));display:grid"></div>`);
   list.forEach((m) => r.append(card(m)));
@@ -322,7 +386,7 @@ function Live(s) {
   const up = DB.live.filter((l) => l.status === "scheduled");
   const rec = DB.live.filter((l) => l.status === "ended");
   if (!now.length) {
-    s.append(el(`<div class="empty" style="margin-top:14px"><b style="color:var(--text)">Nothing is live right now.</b><br>Catch up below.</div>`));
+    s.append(el(`<div class="empty" style="margin-top:14px"><b style="color:var(--text)">${t("Nothing is live right now.")}</b><br>Catch up below.</div>`));
   }
   const mk = (arr, badge) => arr.map((l) => el(`<button class="card" data-live="${l.id}"><div class="thumb" data-art="${l.id}‖${l.title}‖0"><span class="badge">${badge}</span></div><div class="meta"><b>${l.title}</b><div>${progName(l.programId)}</div></div></button>`));
   if (now.length) s.append(rail("Live Now", "", mk(now, "● LIVE")));
@@ -335,7 +399,7 @@ function Programs(s) {
   DB.programs.forEach((p) => {
     const eps = DB.messages.filter((m) => m.programId === p.id && m.status === "published");
     const following = store.follows.includes(p.id);
-    const sec = el(`<section><h2>${p.title} <small>${eps.length} episodes ${following ? "· Following ✓" : ""}</small></h2><p style="color:var(--muted)">${p.description}</p><div class="rowbtns"><button class="btn" data-follow="${p.id}">${following ? "Unfollow" : "Follow program"}</button></div><div class="rail"></div></section>`);
+    const sec = el(`<section><h2>${p.title} <small>${eps.length} episodes ${following ? "· Following ✓" : ""}</small></h2><p style="color:var(--muted)">${p.description}</p>    <div class="rowbtns"><button class="btn" data-follow="${p.id}">${following ? t("Unfollow") : t("Follow program")}</button></div><div class="rail"></div></section>`);
     eps.slice(0, 6).forEach((m) => sec.querySelector(".rail").append(card(m)));
     s.append(sec);
   });
@@ -349,9 +413,9 @@ function Programs(s) {
 function Favorites(s) {
   const favs = store.favs, saved = store.saved;
   const toCards = (ids) => ids.map((id) => DB.messages.find((m) => m.id === id)).filter(Boolean).map((m) => card(m));
-  s.append(el(`<h2>Favorites <small>${favs.length}</small></h2>`));
+  s.append(el(`<h2>${t("Favorites")} <small>${favs.length}</small></h2>`));
   s.append(favs.length ? rail("", "", toCards(favs)) : el(`<div class="empty">Nothing here yet. Tap ♥ on anything you love.</div>`));
-  s.append(el(`<h2>Save for Later <small>${saved.length}</small></h2>`));
+  s.append(el(`<h2>${t("Save for Later")} <small>${saved.length}</small></h2>`));
   if (saved.length) s.append(rail("", "", toCards(saved)));
 }
 
@@ -371,9 +435,9 @@ function openFinished(id) {
     <div class="kicker">WHAT DID YOU LEARN?</div>
     <p style="color:var(--muted)">Before you move on — capture one takeaway for yourself and the family.</p>
     <div data-clist>${commentListHtml(id)}</div>
-    <form data-cform><input data-cinput class="searchbar" placeholder="I learnt that…" aria-label="Share what you learnt">
-    <div class="rowbtns"><button class="btn primary" type="submit">Post reflection</button></div></form>
-    <h2>Keep watching</h2><div class="rail">${next.map((r) => `<button class="card" data-open="${r.id}"><div class="thumb" data-art="${r.id}‖${r.title}‖0"></div><div class="meta"><b>${r.title}</b><div>${mins(r.durationSec)}</div></div></button>`).join("")}</div>`);
+    <form data-cform><input data-cinput class="searchbar" placeholder="${t("Share what you learnt…")}" aria-label="Share what you learnt">
+    <div class="rowbtns"><button class="btn primary" type="submit">${t("Post reflection")}</button></div></form>
+    <h2>${t("Keep watching")}</h2><div class="rail">${next.map((r) => `<button class="card" data-open="${r.id}"><div class="thumb" data-art="${r.id}‖${r.title}‖0"></div><div class="meta"><b>${r.title}</b><div>${mins(r.durationSec)}</div></div></button>`).join("")}</div>`);
   const d = document.getElementById("screen");
   wireComments(d, id, () => openFinished(id));
   d.querySelectorAll("[data-open]").forEach((b) => (b.onclick = () => openDetail(b.dataset.open)));
@@ -381,7 +445,7 @@ function openFinished(id) {
 
 function Community(s) {
   s.append(el(`<div class="hero"><div class="kicker">LEARN OUT LOUD · TEST DATA</div>
-    <h1>What the family learnt</h1>
+    <h1>${t("What the family learnt")}</h1>
     <p>Reflections from every profile on this device.</p></div>`));
   const items = [];
   for (const mid of Object.keys(store.comments)) {
@@ -401,8 +465,8 @@ function Community(s) {
 }
 
 function Search(s) {
-  const input = el(`<input class="searchbar" placeholder="Search messages, programs, music, artists" value="${esc(query)}" aria-label="Search">`);
-  s.append(el(`<h2>Search</h2>`), input);
+  const input = el(`<input class="searchbar" placeholder="${t("Search messages, programs, music, artists")}" value="${esc(query)}" aria-label="Search">`);
+  s.append(el(`<h2>${t("Search")}</h2>`), input);
   const out = el(`<div></div>`);
   s.append(out);
   const run = () => {
@@ -415,7 +479,7 @@ function Search(s) {
     if (hits.length) out.append(rail(`Messages (${hits.length})`, "", hits.slice(0, 8).map((m) => card(m))));
     if (artists.length) out.append(rail(`Artists (${artists.length})`, "",
       artists.map((a) => el(`<div class="card"><div class="thumb" data-art="${a.id}‖${a.name}‖1"></div><div class="meta"><b>${a.name}</b><div>${a.bio}</div></div></div>`))));
-    if (!hits.length && !artists.length) out.append(el(`<div class="empty">No results for “${esc(query)}”. Try “faith” or “healing”.</div>`));
+    if (!hits.length && !artists.length) out.append(el(`<div class="empty">${t("No results for")} “${esc(query)}”.</div>`));
     if (q.length > 2) track("search", { query: q.slice(0, 40), hits: hits.length });
     out.querySelectorAll("[data-open]").forEach((b) => (b.onclick = () => openDetail(b.dataset.open)));
     hydrateArtwork(out);
@@ -449,14 +513,14 @@ function openDetail(id) {
     <div style="color:var(--faint);font-size:12px">Demo content · © LoveWorld</div>
     <p style="color:var(--muted)">${m.description}</p>
     <div class="actions">
-      <button class="btn primary" data-watch="${m.id}">▶ ${store.progress[id] ? "Resume" : "Play"}</button>
-      <button class="btn" data-fav="${m.id}">${fav ? "♥ Favorited" : "♡ Favorite"}</button>
-      <button class="btn" data-save="${m.id}">${sv ? "Saved ✓" : "Save for Later"}</button>
+      <button class="btn primary" data-watch="${m.id}">▶ ${store.progress[id] ? t("Resume") : t("Play")}</button>
+      <button class="btn" data-fav="${m.id}">${fav ? t("♥ Favorited") : t("♡ Favorite")}</button>
+      <button class="btn" data-save="${m.id}">${sv ? t("Saved ✓") : t("Save for Later")}</button>
     </div>
-    <h2>Related</h2><div class="rail">${related.map((r) => `<button class="card" data-open="${r.id}" data-pv="msg:${r.id}"><div class="thumb" data-art="${r.id}‖${r.title}‖0"></div><div class="meta"><b>${r.title}</b><div>${mins(r.durationSec)}</div></div></button>`).join("")}</div>
-    <h2>💬 What did you learn?</h2><div data-clist>${commentListHtml(id)}</div>
-    <form data-cform><input data-cinput class="searchbar" placeholder="Share what you learnt…" aria-label="Share what you learnt">
-    <div class="rowbtns"><button class="btn primary" type="submit">Post reflection</button></div></form>`);
+    <h2>${t("Related")}</h2><div class="rail">${related.map((r) => `<button class="card" data-open="${r.id}" data-pv="msg:${r.id}"><div class="thumb" data-art="${r.id}‖${r.title}‖0"></div><div class="meta"><b>${r.title}</b><div>${mins(r.durationSec)}</div></div></button>`).join("")}</div>
+    <h2>💬 ${t("What did you learn?")}</h2><div data-clist>${commentListHtml(id)}</div>
+    <form data-cform><input data-cinput class="searchbar" placeholder="${t("Share what you learnt…")}" aria-label="Share what you learnt">
+    <div class="rowbtns"><button class="btn primary" type="submit">${t("Post reflection")}</button></div></form>`);
   const d = document.getElementById("screen");
   d.querySelector("[data-watch]").onclick = () => {
     const p = store.progress;
@@ -501,7 +565,7 @@ function openPlaylist(id) {
   openSheet(`🎵 ${p.title}`, songs.map((x) => {
     const a = DB.artists.find((a) => a.id === x.artistId);
     return `<div class="chips"><button data-play="${x.id}">▶ ${x.title} — ${a?.name || ""}</button></div>`;
-  }).join("") + `<div class="rowbtns"><button class="btn primary" id="play-all">Play All</button></div>`);
+  }).join("") + `<div class="rowbtns"><button class="btn primary" id="play-all">${t("Play All")}</button></div>`);
   document.getElementById("play-all").onclick = () => { queue = { ids: songs.map((x) => x.id), i: 0 }; playTrack(queue.ids[0]); };
 }
 
@@ -763,7 +827,7 @@ window.addEventListener("scroll", () => {
   const nav = document.querySelector(".nav");
   if (!nav) return;
   if (y > 8 && y > lastY + 2) nav.classList.add("nav-hidden");
-  else if (y < lastY - 2 || y <= 8) nav.classList.remove("nav-hidden");
+  else if (y < lastY - 2) nav.classList.remove("nav-hidden");
   lastY = y;
 }, { passive: true });
 
@@ -1553,12 +1617,12 @@ function ensureDrawer() {
   document.body.append(scrim);
   const d = el(`<aside id="drawer" hidden aria-label="Menu">
     <div class="drawer-head"><div class="logo">PCO <span>TV</span></div><button id="drawer-x" aria-label="Close">✕</button></div>
-    <button data-go="billing">💳 Billing</button>
-    <button data-go="settings">⚙ Settings</button>
-    <button data-go="account" id="drawer-account">👤 Account</button>
-    <button data-go="signin" id="drawer-signin">🔑 Sign In</button>
-    <button data-go="tv">📺 TV mode</button>
-    <button data-go="install">📲 Install app</button>
+    <button data-go="billing">💳 <span class="dl" data-k="Billing">Billing</span></button>
+    <button data-go="settings">⚙ <span class="dl" data-k="Settings">Settings</span></button>
+    <button data-go="account" id="drawer-account">👤 <span class="dl" data-k="Account">Account</span></button>
+    <button data-go="signin" id="drawer-signin">🔑 <span class="dl" data-k="Sign In">Sign In</span></button>
+    <button data-go="tv">📺 <span class="dl" data-k="TV mode">TV mode</span></button>
+    <button data-go="install">📲 <span class="dl" data-k="Install app">Install app</span></button>
   </aside>`);
   document.body.append(d);
   d.querySelector("#drawer-x").onclick = closeDrawer;
@@ -1569,6 +1633,7 @@ function ensureDrawer() {
 }
 
 function openDrawer() {
+  document.querySelectorAll("#drawer .dl").forEach((s) => { s.textContent = t(s.dataset.k); });
   document.getElementById("drawer-signin").style.display = SB_USER ? "none" : "";
   document.getElementById("drawer-account").style.display = SB_USER ? "" : "none";
   document.getElementById("drawer").hidden = false;
@@ -1598,18 +1663,18 @@ function openBilling() {
     document.getElementById("screen").querySelector("#b-login").onclick = renderLanding;
     return;
   }
-  openSheet("💳 Billing", `<div id="bill-body"><p style="color:var(--muted)">Loading subscription…</p></div>`);
+  openSheet(`💳 ${t("Billing")}`, `<div id="bill-body"><p style="color:var(--muted)">Loading subscription…</p></div>`);
   const body = document.getElementById("screen").querySelector("#bill-body");
   billingCall({ action: "status", email: SB_USER.email }).then(({ subscription: sub }) => {
     const active = sub && sub.status === "active";
     body.innerHTML = `
       ${active ? `<div class="detail" style="margin:0 0 12px"><b>★ ${sub.amount / 100 >= 1000 ? "Annual" : sub.amount / 100 >= 3000 ? "Quarterly" : "Monthly"} · Active</b>
         <div style="color:var(--muted);font-size:14px">Renews ${sub.next_payment ? new Date(sub.next_payment).toDateString() : "soon"} · ${sub.card || "card on file"}</div>
-        <div class="rowbtns"><button class="btn" id="b-cancel">Cancel auto-renew</button></div></div>`
+        <div class="rowbtns"><button class="btn" id="b-cancel">${t("Cancel auto-renew")}</button></div></div>`
       : `<p style="color:var(--muted)">No active subscription${sub ? ` (last: ${sub.status})` : ""}. Pick a plan — test mode, no real charge:</p>
         <div class="chips" id="b-plans">${BILLING_PLANS_UI.map((p, i) =>
-          `<button data-plan="${p.id}" aria-pressed="${i === 0}"><b>${p.name}</b><br>${p.price}</button>`).join("")}</div>
-        <div class="rowbtns"><button class="btn primary" id="b-go">Continue to Paystack test checkout</button></div>`}
+          `<button data-plan="${p.id}" aria-pressed="${i === 0}"><b>${t(p.name)}</b><br>${p.price}</button>`).join("")}</div>
+        <div class="rowbtns"><button class="btn primary" id="b-go">${t("Continue to checkout")}</button></div>`}
       <div id="b-msg" style="color:var(--muted);font-size:14px;margin-top:8px"></div>`;
     let plan = "monthly";
     body.querySelectorAll("[data-plan]")?.forEach((x) => (x.onclick = () => {
@@ -1661,18 +1726,26 @@ function applySettings() {
 }
 function openSettings() {
   const s = appSettings();
-  openSheet("⚙ Settings", `
-    <h2>Language</h2>
-    <div class="chips"><button aria-pressed="true">English ✓</button></div>
-    <p style="color:var(--muted);font-size:14px">More languages (Français, Yorùbá, Igbo, Hausa) arrive with the multi-language release — strings are already externalized.</p>
-    <h2>Brightness</h2>
+  openSheet(`⚙ ${t("Settings")}`, `
+    <h2>${t("Language")}</h2>
+    <div class="chips" id="set-lang">
+      <button data-lang="en" aria-pressed="${lang() === "en"}">English</button>
+      <button data-lang="fr" aria-pressed="${lang() === "fr"}">Français</button>
+      <button data-lang="es" aria-pressed="${lang() === "es"}">Español</button>
+    </div>
+    <p style="color:var(--muted);font-size:14px">Menus and buttons translate. Video titles stay in English for now.</p>
+    <h2>${t("Brightness")}</h2>
     <input id="set-bright" type="range" min="0" max="70" value="${s.brightness || 0}" style="width:100%" aria-label="Brightness">
-    <h2>Appearance</h2>
+    <h2>${t("Appearance")}</h2>
     <div class="chips" id="set-theme">
       <button data-th="dark" aria-pressed="${(s.theme || "dark") === "dark"}">🌙 Dark</button>
       <button data-th="light" aria-pressed="${s.theme === "light"}">☀ Light</button>
     </div>`);
   const d = document.getElementById("screen");
+  d.querySelectorAll("[data-lang]").forEach((x) => (x.onclick = () => {
+    saveSettings({ ...appSettings(), lang: x.dataset.lang });
+    render();
+  }));
   d.querySelector("#set-bright").oninput = (e) => {
     const next = { ...appSettings(), brightness: +e.target.value };
     saveSettings(next);
@@ -1763,7 +1836,7 @@ function renderPicker() {
   const s = document.getElementById("screen");
   s.innerHTML = "";
   const wrap = el(`<div style="text-align:center;padding:40px 0"><div class="kicker">PCO TV · WHO'S WATCHING?</div>
-    <h1 style="font-size:32px">Choose your profile</h1>
+    <h1 style="font-size:32px">${t("Choose your profile")}</h1>
     <p style="color:var(--muted)">Profiles live on this device only. Each person gets their own favorites, progress, and subscriptions.</p>
     <div id="plist" style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:20px"></div>
     <div style="margin-top:22px"><input id="newprof" class="searchbar" style="max-width:280px;margin:0 auto" placeholder="New profile name…" aria-label="New profile name" maxlength="20">
