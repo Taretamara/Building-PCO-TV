@@ -826,8 +826,8 @@ window.addEventListener("scroll", () => {
   const y = window.scrollY || 0;
   const nav = document.querySelector(".nav");
   if (!nav) return;
-  if (y > 8 && y > lastY + 2) nav.classList.add("nav-hidden");
-  else if (y < lastY - 2) nav.classList.remove("nav-hidden");
+  if (y > 8) nav.classList.add("nav-hidden");
+  else nav.classList.remove("nav-hidden");
   lastY = y;
 }, { passive: true });
 
