@@ -61,6 +61,12 @@ h2 small{color:var(--faint);font-weight:400}
 .thumb.art{background-size:cover;background-position:center}
 .thumb{position:relative}
 .dur{position:absolute;right:8px;bottom:8px;background:rgba(0,0,0,.72);color:var(--text);font-size:11px;font-weight:700;padding:3px 8px;border-radius:99px}
+.topcard{display:grid!important;grid-template-columns:64px 1fr;align-items:stretch}
+.topcard .thumb{height:100%;min-height:110px}
+.topnum{font-size:52px;font-weight:800;color:var(--gold);display:flex;align-items:center;justify-content:center}
+.topcard .meta{grid-column:1/-1}
+#onboard{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:20px}
+.onboard-card{background:var(--bg);border:1px solid var(--gold);border-radius:18px;padding:26px;max-width:520px;width:100%;text-align:center}
 #preview.pv{background:var(--bg);border:1px solid var(--gold);border-radius:14px;overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.7)}
 .pv-zoom{width:100%;aspect-ratio:16/9;background-size:cover;background-position:center;animation:pvzoom 60s linear forwards}
 @keyframes pvzoom{from{transform:scale(1)}to{transform:scale(1.18)}}

@@ -451,10 +451,123 @@ function Home(s) {
     (live ? [live] : DB.live.filter((l) => l.status === "scheduled"))
       .map((l) => el(`<button class="card" data-live="${l.id}"><div class="thumb" data-art="${l.id}‖${l.title}‖0"><span class="badge">${l.status === "live" ? "● LIVE" : "UPCOMING"}</span></div><div class="meta"><b>${l.title}</b><div>${progName(l.programId)}</div></div></button>`))));
   s.append(rail("Pastor Chris", "messages", recent.slice(0, 8).map((m) => card(m))));
+  const top = topTen();
+  if (top.length) {
+    const sec = el(`<section><h2>Top 10 <small>right now</small></h2><div class="rail top10"></div></section>`);
+    const r = sec.querySelector(".rail");
+    top.forEach((m, i) => {
+      const b = el(`<button class="card topcard" data-open="${m.id}" data-pv="msg:${m.id}">
+        <div class="topnum">${i + 1}</div>
+        <div class="thumb" data-art="${m.id}‖${m.title}‖0"></div>
+        <div class="meta"><b>${m.title}</b><div>${mins(m.durationSec)}</div></div></button>`);
+      r.append(b);
+    });
+    s.append(sec);
+  }
+  s.append(rail("Collections", "guided journeys",
+    COLLECTIONS.map((c) => {
+      const pct = collectionProgress(c);
+      return el(`<button class="card" data-col="${c.id}"><div class="thumb" data-art="p-col‖${c.title}‖0"></div>
+        <div class="meta"><b>📚 ${c.title}</b><div>${c.desc}</div>
+        <div class="progress"><i style="width:${pct}%"></i></div></div></button>`);
+    })));
+  const recs = recommended();
+  if (recs.length) s.append(rail("Recommended for You", "based on your picks", recs.map((m) => card(m))));
+  s.querySelectorAll("[data-col]").forEach((b) => (b.onclick = () => openCollection(b.dataset.col)));
+  maybeOnboard(s);
   s.append(rail("LoveWorld Music", "curated playlists",
     DB.playlists.map((p) => el(`<button class="card" data-pl="${p.id}"><div class="thumb" data-art="${p.id}‖${p.title}‖1"></div><div class="meta"><b>${p.title}</b><div>${p.songIds.length} songs</div></div></button>`))));
   s.querySelectorAll("[data-live]").forEach((b) => (b.onclick = () => openLive(b.dataset.live)));
   s.querySelectorAll("[data-pl]").forEach((b) => (b.onclick = () => openPlaylist(b.dataset.pl)));
+}
+
+/* Curated collections (Foundation-style bundles): ordered message journeys
+   with progress. Built from the live catalog (seed + admin items). */
+const COLLECTIONS = [
+  { id: "col-foundations", title: "Foundations", desc: "Start here: faith, prayer, and the Spirit.", topics: ["t-faith", "t-prayer", "t-spirit"], take: 6 },
+  { id: "col-healing", title: "Healing School", desc: "Healing, health, and wholeness.", topics: ["t-healing"], take: 6 },
+  { id: "col-family", title: "Family Life", desc: "Godly homes and raising champions.", topics: ["t-family", "t-living"], take: 6 },
+  { id: "col-purpose", title: "Purpose & Calling", desc: "Find your assignment and finish it.", topics: ["t-purpose", "t-evangelism"], take: 6 },
+];
+function collectionItems(col) {
+  const out = [];
+  for (const tid of col.topics) {
+    for (const m of DB.messages.filter((x) => x.status === "published" && x.topicIds.includes(tid))) {
+      if (!out.some((y) => y.id === m.id)) out.push(m);
+      if (out.length >= col.take) return out;
+    }
+  }
+  return out;
+}
+function collectionProgress(col) {
+  const items = collectionItems(col);
+  if (!items.length) return 0;
+  const prog = store.progress;
+  const done = items.filter((m) => prog[m.id]).length;
+  return Math.round((done / items.length) * 100);
+}
+function openCollection(id) {
+  const col = COLLECTIONS.find((c) => c.id === id);
+  if (!col) return;
+  const items = collectionItems(col);
+  const pct = collectionProgress(col);
+  openSheet(`📚 ${col.title}`, `<p style="color:var(--muted)">${col.desc}</p>
+    <div class="progress" style="height:8px"><i style="width:${pct}%"></i></div>
+    <p style="color:var(--muted);font-size:13px">${pct}% complete</p>
+    ${items.map((m, i) => `<div class="chips"><button data-open="${m.id}"><b>${i + 1}.</b> ${m.title} · ${mins(m.durationSec)}${store.progress[m.id] ? " · ◐" : ""}</button></div>`).join("")}`);
+  document.getElementById("screen").querySelectorAll("[data-open]").forEach((b) => (b.onclick = () => openDetail(b.dataset.open)));
+}
+
+/* Top 10 row + affinity recommendations (topics picked at onboarding + favorites). */
+function topTen() {
+  return [...DB.messages.filter((m) => m.status === "published")]
+    .sort((a, b) => (a.featuredRank ?? 999) - (b.featuredRank ?? 999) || (a.publishedAt < b.publishedAt ? 1 : -1))
+    .slice(0, 10);
+}
+function myTopics() {
+  try { return JSON.parse(localStorage.getItem(K("topics")) || "[]"); }
+  catch { return []; }
+}
+function recommended() {
+  const topics = new Set(myTopics());
+  for (const id of store.favs) {
+    const m = DB.messages.find((x) => x.id === id);
+    if (m) m.topicIds.forEach((t) => topics.add(t));
+  }
+  if (!topics.size) return [];
+  const prog = store.progress;
+  return DB.messages
+    .filter((m) => m.status === "published" && !prog[m.id] && m.topicIds.some((t) => topics.has(t)))
+    .sort((a, b) => (a.publishedAt < b.publishedAt ? 1 : -1))
+    .slice(0, 8);
+}
+
+/* First-run onboarding: pick faith-feeds → personalizes Recommended. Once per profile. */
+function maybeOnboard(s) {
+  if (localStorage.getItem(K("onboarded")) === "1") return;
+  const picks = new Set();
+  const ov = el(`<div id="onboard"><div class="onboard-card">
+    <div class="kicker">FIRST · 20 SECONDS</div>
+    <h2>What feeds your faith?</h2>
+    <p>Pick any — your Home recommends around them.</p>
+    <div class="chips" style="justify-content:center">${DB.topics.map((t) =>
+      `<button data-tpick="${t.id}" aria-pressed="false">${t.name}</button>`).join("")}</div>
+    <div class="rowbtns" style="justify-content:center"><button class="btn primary" id="ob-go">Done</button>
+    <button class="btn" id="ob-skip">Skip</button></div></div></div>`);
+  s.append(ov);
+  ov.querySelectorAll("[data-tpick]").forEach((b) => (b.onclick = () => {
+    const id = b.dataset.tpick;
+    if (picks.has(id)) { picks.delete(id); b.setAttribute("aria-pressed", "false"); }
+    else { picks.add(id); b.setAttribute("aria-pressed", "true"); }
+  }));
+  const done = () => {
+    localStorage.setItem(K("topics"), JSON.stringify([...picks]));
+    localStorage.setItem(K("onboarded"), "1");
+    ov.remove();
+    render();
+  };
+  ov.querySelector("#ob-go").onclick = done;
+  ov.querySelector("#ob-skip").onclick = done;
 }
 
 function Messages(s) {
