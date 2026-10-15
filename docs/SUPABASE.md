@@ -84,3 +84,26 @@ insert into pco_admins (email, role) values ('you@example.com', 'super_admin');
 Add more admins the same way (`content_admin` for editors). Remove one with
 `delete from pco_admins where email = '...'`. Viewer signups are unaffected —
 anyone can still create a viewer account; only allowlisted emails pass admin.
+
+## 5. Shared community (everyone sees everyone)
+Run this SQL once. Reflections become public to all app users; only signed-in
+users can post (the app already gates posting behind login). Word filter +
+Report/hide still apply on-device; full moderation queue stays post-MVP.
+```sql
+create table if not exists pco_community (
+  id bigint generated always as identity primary key,
+  message_id text not null,
+  name text not null,
+  text text not null check (char_length(text) between 1 and 500),
+  amens integer not null default 0,
+  created_at timestamptz default now()
+);
+alter table pco_community enable row level security;
+drop policy if exists "public read" on pco_community;
+create policy "public read" on pco_community
+  for select using (true);
+drop policy if exists "signed-in post" on pco_community;
+create policy "signed-in post" on pco_community
+  for insert to authenticated
+  with check (char_length(text) between 1 and 500);
+```

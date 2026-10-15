@@ -111,9 +111,59 @@ function getComments(msgId) {
 function postComment(msgId, text) {
   const all = store.comments;
   const list = all[msgId] || [];
-  list.unshift({ name: activeProfile()?.name || "Viewer", text: text.trim(), at: Date.now(), amens: [] });
+  const entry = { name: activeProfile()?.name || "Viewer", text: text.trim(), at: Date.now(), amens: [] };
+  list.unshift(entry);
   all[msgId] = list;
   store.comments = all;
+  publishShared(msgId, entry);
+  return entry;
+}
+
+/* Shared community: everyone reads; signed-in users post. Local-first —
+   cloud failures never block posting. Entries tagged with cloud ids. */
+const sharedCache = new Map(); // msgId -> [{cid, name, text, amens, at}]
+async function sharedFor(msgId) {
+  if (sharedCache.has(msgId)) return sharedCache.get(msgId);
+  const out = [];
+  try {
+    const sb = await sbClient();
+    if (sb) {
+      const { data } = await sb.from("pco_community").select("id,name,text,amens,created_at")
+        .eq("message_id", msgId).order("created_at", { ascending: false }).limit(20);
+      for (const r of data || []) out.push({ cid: r.id, name: r.name, text: r.text, amens: r.amens || 0, at: Date.parse(r.created_at) || 0 });
+    }
+  } catch { /* offline — local + seeded only */ }
+  sharedCache.set(msgId, out);
+  return out;
+}
+async function publishShared(msgId, entry) {
+  try {
+    const sb = await sbClient();
+    if (!sb || !SB_USER) return;
+    const { data, error } = await sb.from("pco_community")
+      .insert({ message_id: msgId, name: entry.name, text: entry.text }).select("id").single();
+    if (!error && data) {
+      const all = store.comments;
+      const found = (all[msgId] || []).find((c) => !c.cid && c.at === entry.at && c.text === entry.text);
+      if (found) {
+        found.cid = data.id;
+        store.comments = all; // persist tag (also syncs)
+      }
+      const cached = sharedCache.get(msgId) || [];
+      cached.unshift({ cid: data.id, name: entry.name, text: entry.text, amens: 0, at: Date.now() });
+      sharedCache.set(msgId, cached);
+    }
+  } catch { /* stays local-only */ }
+}
+function amenElse() {
+  try { return JSON.parse(localStorage.getItem(K("amenElse")) || "{}"); }
+  catch { return {}; }
+}
+function toggleAmenElse(cid) {
+  const m = amenElse();
+  if (m[cid]) delete m[cid];
+  else m[cid] = 1;
+  localStorage.setItem(K("amenElse"), JSON.stringify(m));
 }
 
 function toggleAmen(msgId, idx) {
@@ -150,21 +200,61 @@ function unhideAll(msgId) {
   localStorage.setItem(K("hidden"), JSON.stringify(hiddenKeys().filter((k) => !k.startsWith(msgId + ":"))));
 }
 
-function commentListHtml(msgId) {
+function commentListHtml(msgId, shared = []) {
   const hidden = hiddenKeys();
-  const mine = (store.comments[msgId] || []).map((c, j) => ({ ...c, mine: true, key: `${msgId}:u${j}`, idx: j }));
-  const seeded = DEMO_COMMENTS.filter((c) => c.msg === msgId).map((c, j) => ({ ...c, key: `${msgId}:s${j}` }));
-  const total = mine.length + seeded.length;
-  const list = [...mine, ...seeded].filter((c) => !hidden.includes(c.key));
-  const hiddenCount = total - list.length;
+  // Local entries already published to cloud (cid) render once, via shared.
+  const mine = (store.comments[msgId] || [])
+    .filter((c) => !c.cid)
+    .map((c, j) => ({ ...c, mine: true, key: `${msgId}:u${j}`, idx: j }));
+  const pub = shared
+    .filter((c) => !hidden.includes(`${msgId}:c${c.cid}`))
+    .map((c) => ({ ...c, key: `${msgId}:c${c.cid}`, shared: true }));
+  const seededPool = DEMO_COMMENTS.filter((c) => c.msg === msgId)
+    .map((c, j) => ({ ...c, key: `${msgId}:s${j}` }));
+  const seeded = (mine.length + pub.length) === 0 ? seededPool : [];
+  const all = [...mine, ...pub, ...seeded].filter((c) => !hidden.includes(c.key));
+  const hiddenCount = mine.length + pub.length + seededPool.length - all.length;
   const hiddenNote = hiddenCount > 0
     ? `<div style="margin:8px 0"><button class="amen" data-unhide="${msgId}">${hiddenCount} hidden by you · Undo</button></div>` : "";
-  if (!list.length && !hiddenCount) return `<div class="empty">${t("No reflections yet — share the first one below. What did you learn?")}</div>`;
-  return hiddenNote + list.map((c) => `
+  if (!all.length && !hiddenCount) return `<div class="empty">${t("No reflections yet — share the first one below. What did you learn?")}</div>`;
+  const extra = amenElse();
+  return hiddenNote + all.map((c) => {
+    const count = c.shared ? (c.amens || 0) + (extra[c.cid] ? 1 : 0) : amenCount(c);
+    const amenKey = c.shared ? `c${c.cid}` : (c.mine ? `u${c.idx}` : `s${c.key.split(":")[1].slice(1)}`);
+    return `
     <div class="comment"><b>${esc(c.name)}</b>${c.mine ? ` <small>(you)</small>` : ""}
     <p>${esc(mask(c.text))}</p>
-    <button class="amen" data-amen="${c.key}">🙏 Amen · ${amenCount(c)}</button>
-    <button class="amen" data-report="${c.key}">Report</button></div>`).join("");
+    <button class="amen" data-amen="${msgId}:${amenKey}">🙏 Amen · ${count}</button>
+    <button class="amen" data-report="${c.key}">Report</button></div>`;
+  }).join("");
+}
+
+/* Fetch shared reflections into an open comment list, then repaint it. */
+async function refreshShared(msgId, listEl, rerender) {
+  try {
+    const shared = await sharedFor(msgId);
+    listEl.innerHTML = commentListHtml(msgId, shared);
+    wireListButtons(listEl, msgId, rerender);
+    hydrateArtwork(listEl);
+  } catch { /* keep local content */ }
+}
+
+function wireListButtons(scope, msgId, rerender) {
+  scope.querySelectorAll("[data-amen]").forEach((b) => (b.onclick = () => {
+    if (!SB_USER) { openAuthGate(); return; }
+    const [mid, ref] = b.dataset.amen.split(":");
+    if (ref.startsWith("c")) toggleAmenElse(+ref.slice(1));
+    else if (ref.startsWith("u")) toggleAmen(mid, +ref.slice(1));
+    rerender();
+  }));
+  scope.querySelectorAll("[data-report]").forEach((b) => (b.onclick = () => {
+    hideComment(b.dataset.report);
+    rerender();
+  }));
+  scope.querySelectorAll("[data-unhide]").forEach((b) => (b.onclick = () => {
+    unhideAll(b.dataset.unhide);
+    rerender();
+  }));
 }
 
 /* Reflections need an account (spam control). Guests read freely; posting
@@ -181,20 +271,7 @@ function needAuth(detailId) {
 }
 
 function wireComments(scope, msgId, rerender) {
-  scope.querySelectorAll("[data-amen]").forEach((b) => (b.onclick = () => {
-    if (!SB_USER) { openAuthGate(); return; }
-    const [mid, ref] = b.dataset.amen.split(":");
-    if (ref.startsWith("u")) toggleAmen(mid, +ref.slice(1));
-    rerender();
-  }));
-  scope.querySelectorAll("[data-report]").forEach((b) => (b.onclick = () => {
-    hideComment(b.dataset.report);
-    rerender();
-  }));
-  scope.querySelectorAll("[data-unhide]").forEach((b) => (b.onclick = () => {
-    unhideAll(b.dataset.unhide);
-    rerender();
-  }));
+  wireListButtons(scope, msgId, rerender);
   const form = scope.querySelector("[data-cform]");
   if (form) form.onsubmit = (e) => {
     e.preventDefault();
@@ -451,27 +528,62 @@ function openFinished(id) {
   const d = document.getElementById("screen");
   wireComments(d, id, () => openFinished(id));
   d.querySelectorAll("[data-open]").forEach((b) => (b.onclick = () => openDetail(b.dataset.open)));
+  refreshShared(id, d.querySelector("[data-clist]"), () => openFinished(id));
 }
 
 function Community(s) {
-  s.append(el(`<div class="hero"><div class="kicker">LEARN OUT LOUD · TEST DATA</div>
+  s.append(el(`<div class="hero"><div class="kicker">LEARN OUT LOUD</div>
     <h1>${t("What the family learnt")}</h1>
-    <p>Reflections from every profile on this device.</p></div>`));
-  const items = [];
-  for (const mid of Object.keys(store.comments)) {
-    for (const c of store.comments[mid]) items.push({ msgId: mid, ...c, when: c.at || 0 });
-  }
-  for (const c of DEMO_COMMENTS) items.push({ msgId: c.msg, name: c.name, text: c.text, amens: c.amens, when: 0 });
-  items.sort((a, b) => b.when - a.when);
-  const wrap = el(`<div></div>`);
-  if (!items.length) wrap.append(el(`<div class="empty">No reflections yet. Finish any message — you'll be invited to share what you learnt.</div>`));
-  items.slice(0, 20).forEach((c) => {
-    const m = DB.messages.find((x) => x.id === c.msgId);
-    wrap.append(el(`<div class="comment"><b>${esc(c.name)}</b> <small>on “${esc(m?.title || c.msgId)}”</small><p>${esc(mask(c.text))}</p>
-      <div class="rowbtns"><button class="btn" data-open="${c.msgId}">Watch & join in</button></div></div>`));
-  });
+    <p>Reflections from every user, everywhere.</p></div>`));
+  const wrap = el(`<div><div class="empty">Loading reflections…</div></div>`);
   s.append(wrap);
-  s.querySelectorAll("[data-open]").forEach((b) => (b.onclick = () => openDetail(b.dataset.open)));
+  fillCommunity(wrap);
+}
+
+async function fillCommunity(wrap) {
+  const items = [];
+  // Everyone's shared reflections first (newest first).
+  try {
+    const sb = await sbClient();
+    if (sb) {
+      const { data } = await sb.from("pco_community").select("id,message_id,name,text,amens,created_at")
+        .order("created_at", { ascending: false }).limit(30);
+      for (const r of data || []) {
+        items.push({ msgId: r.message_id, name: r.name, text: r.text, amens: r.amens || 0, when: Date.parse(r.created_at) || 0, cid: r.id });
+      }
+    }
+  } catch { /* offline — local voices only */ }
+  // This device's not-yet-published reflections (no cid).
+  for (const mid of Object.keys(store.comments)) {
+    for (const c of store.comments[mid]) {
+      if (!c.cid) items.push({ msgId: mid, ...c, when: c.at || 0 });
+    }
+  }
+  // Seeded voices only as a last resort.
+  if (!items.length) {
+    for (const c of DEMO_COMMENTS) items.push({ msgId: c.msg, name: c.name, text: c.text, amens: c.amens, when: 0 });
+  }
+  items.sort((a, b) => b.when - a.when);
+  wrap.innerHTML = "";
+  const hidden = hiddenKeys();
+  const extra = amenElse();
+  if (!items.length) wrap.append(el(`<div class="empty">No reflections yet. Finish any message — you'll be invited to share what you learnt.</div>`));
+  items.slice(0, 30).forEach((c) => {
+    const m = DB.messages.find((x) => x.id === c.msgId);
+    const key = `${c.msgId}:c${c.cid || "local"}`;
+    if (c.cid && hidden.includes(key)) return;
+    const count = (c.amens || 0) + (c.cid && extra[c.cid] ? 1 : 0);
+    const row = el(`<div class="comment"><b>${esc(c.name)}</b> <small>on “${esc(m?.title || c.msgId)}”</small><p>${esc(mask(c.text))}</p>
+      <div class="rowbtns"><button class="btn" data-open="${c.msgId}">Watch & join in</button>
+      ${c.cid ? `<button class="amen" data-camen="${c.cid}">🙏 Amen · ${count}</button>` : ""}</div></div>`);
+    wrap.append(row);
+  });
+  wrap.querySelectorAll("[data-open]").forEach((b) => (b.onclick = () => openDetail(b.dataset.open)));
+  wrap.querySelectorAll("[data-camen]").forEach((b) => (b.onclick = () => {
+    if (!SB_USER) { openAuthGate(); return; }
+    toggleAmenElse(+b.dataset.camen);
+    fillCommunity(wrap);
+  }));
 }
 
 function Search(s) {
@@ -554,6 +666,7 @@ function openDetail(id) {
   };
   d.querySelectorAll("[data-open]").forEach((b) => (b.onclick = () => openDetail(b.dataset.open)));
   wireComments(d, id, () => openDetail(id));
+  refreshShared(id, d.querySelector("[data-clist]"), () => openDetail(id));
 }
 
 function openLive(id) {
