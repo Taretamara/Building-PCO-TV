@@ -820,16 +820,8 @@ function updateOnline() {
 window.addEventListener("online", updateOnline);
 window.addEventListener("offline", updateOnline);
 
-/* Header auto-hides on scroll down, returns on scroll up (cleaner reading). */
+/* Header flows with the page (no sticky show/hide, no jumps). */
 let lastY = 0;
-window.addEventListener("scroll", () => {
-  const y = window.scrollY || 0;
-  const nav = document.querySelector(".nav");
-  if (!nav) return;
-  if (y > 8) nav.classList.add("nav-hidden");
-  else nav.classList.remove("nav-hidden");
-  lastY = y;
-}, { passive: true });
 
 /* ---- Install: always-visible button + per-device guide ----
    Chrome/Android may offer a one-tap prompt (beforeinstallprompt); every
