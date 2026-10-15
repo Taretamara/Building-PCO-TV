@@ -848,7 +848,7 @@ function deviceKind() {
 function installSteps() {
   if (deviceKind() === "ios") return `<b>On your iPhone:</b><br>1. Tap <b>Share</b> below.<br>2. Tap <b>Add to Home Screen</b>.<br>3. Tap <b>Add</b>.`;
   if (deviceKind() === "android") return `<b>On your Android:</b><br>1. Tap the <b>⋮ menu</b>.<br>2. Tap <b>Install app</b>.<br>3. Confirm.`;
-  return `<b>On this computer:</b><br>1. Click the <b>install icon</b> in the address bar.<br>2. Click <b>Install</b>.`;
+  return `<b>On this computer:</b><br>1. Open the PCO TV menu (☰) → <b>Install app</b>.<br>2. If nothing pops up: browser menu ⋮ → <b>Install page as app</b>.`;
 }
 
 function openInstallGuide() {
