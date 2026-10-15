@@ -1,8 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="480" height="270">
-  <rect width="480" height="270" fill="#1c150e"/>
-  <circle cx="400" cy="40" r="110" fill="#D9A441" opacity="0.18"/>
-  <circle cx="70" cy="235" r="80" fill="#D9A441" opacity="0.12"/>
-  <circle cx="240" cy="118" r="52" fill="none" stroke="#D9A441" stroke-width="6" opacity="0.9"/>
-  <path d="M230 92 L262 118 L230 144 Z" fill="#F2C66B"/>
-  <text x="240" y="212" text-anchor="middle" font-family="Arial,sans-serif" font-size="26" letter-spacing="6" fill="#C9BCA6">MESSAGE</text>
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#8a5c14"/><stop offset="1" stop-color="#3a2a08"/>
+  </linearGradient></defs>
+  <rect width="480" height="270" fill="url(#g)"/>
+  <circle cx="400" cy="40" r="120" fill="#F2C66B" opacity="0.35"/>
+  <circle cx="60" cy="240" r="90" fill="#F2C66B" opacity="0.25"/>
+  <circle cx="240" cy="112" r="56" fill="#0E0C0A" opacity="0.55"/>
+  <circle cx="240" cy="112" r="56" fill="none" stroke="#F2C66B" stroke-width="7"/>
+  <path d="M228 84 L264 112 L228 140 Z" fill="#F2C66B"/>
+  <text x="240" y="214" text-anchor="middle" font-family="Arial,sans-serif" font-size="30" font-weight="bold" letter-spacing="8" fill="#F7F1E6">MESSAGE</text>
 </svg>

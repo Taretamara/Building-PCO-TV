@@ -1,7 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="480" height="270">
-  <rect width="480" height="270" fill="#101827"/>
-  <rect x="120" y="60" width="240" height="110" rx="12" fill="none" stroke="#7FB2E5" stroke-width="6"/>
-  <rect x="140" y="82" width="200" height="14" rx="7" fill="#7FB2E5" opacity="0.7"/>
-  <rect x="140" y="106" width="150" height="14" rx="7" fill="#7FB2E5" opacity="0.45"/>
-  <text x="240" y="222" text-anchor="middle" font-family="Arial,sans-serif" font-size="26" letter-spacing="6" fill="#C9BCA6">PROGRAM</text>
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#274b73"/><stop offset="1" stop-color="#0d1a2b"/>
+  </linearGradient></defs>
+  <rect width="480" height="270" fill="url(#g)"/>
+  <circle cx="80" cy="50" r="90" fill="#7FB2E5" opacity="0.3"/>
+  <rect x="120" y="56" width="240" height="104" rx="14" fill="#0E0C0A" opacity="0.45"/>
+  <rect x="120" y="56" width="240" height="104" rx="14" fill="none" stroke="#7FB2E5" stroke-width="6"/>
+  <rect x="142" y="80" width="196" height="14" rx="7" fill="#7FB2E5"/>
+  <rect x="142" y="104" width="140" height="14" rx="7" fill="#7FB2E5" opacity="0.6"/>
+  <rect x="142" y="128" width="90" height="14" rx="7" fill="#D9A441"/>
+  <text x="240" y="222" text-anchor="middle" font-family="Arial,sans-serif" font-size="30" font-weight="bold" letter-spacing="8" fill="#F7F1E6">PROGRAM</text>
 </svg>
