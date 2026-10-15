@@ -248,6 +248,7 @@ function wireListButtons(scope, msgId, rerender) {
     rerender();
   }));
   scope.querySelectorAll("[data-report]").forEach((b) => (b.onclick = () => {
+    if (!SB_USER) { openAuthGate(); return; }
     hideComment(b.dataset.report);
     rerender();
   }));
