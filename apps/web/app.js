@@ -838,12 +838,17 @@ function isInstalled() {
     window.navigator.standalone === true; // iOS home-screen apps
 }
 
+function deviceKind() {
+  const ua = navigator.userAgent;
+  if (/iphone|ipad|ipod/i.test(ua)) return "ios";
+  if (/android/i.test(ua)) return "android";
+  return "desktop";
+}
+
 function installSteps() {
-  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
-  const android = /android/i.test(navigator.userAgent);
-  if (ios) return `<b>iPhone / iPad</b><br>1. Tap <b>Share</b> (square with arrow) below.<br>2. Tap <b>Add to Home Screen</b>.<br>3. Tap <b>Add</b> — PCO TV opens fullscreen like a real app.`;
-  if (android) return `<b>Android</b><br>1. Tap the <b>⋮ menu</b> (top right).<br>2. Tap <b>Add to Home screen</b> or <b>Install app</b>.<br>3. Confirm — find PCO TV on your home screen.`;
-  return `<b>Computer</b><br>1. Click the <b>install icon</b> at the right of the address bar.<br>2. Click <b>Install</b>.<br>Or Chrome menu (⋮) → <b>Save and share → Install page as app</b>.`;
+  if (deviceKind() === "ios") return `<b>On your iPhone:</b><br>1. Tap <b>Share</b> below.<br>2. Tap <b>Add to Home Screen</b>.<br>3. Tap <b>Add</b>.`;
+  if (deviceKind() === "android") return `<b>On your Android:</b><br>1. Tap the <b>⋮ menu</b>.<br>2. Tap <b>Install app</b>.<br>3. Confirm.`;
+  return `<b>On this computer:</b><br>1. Click the <b>install icon</b> in the address bar.<br>2. Click <b>Install</b>.`;
 }
 
 function openInstallGuide() {
@@ -853,7 +858,7 @@ function openInstallGuide() {
     return;
   }
   openSheet("📲 Install PCO TV", `
-    <p style="color:var(--muted)">Get the app icon, fullscreen viewing, and offline access. Free, no app store needed.</p>
+    <p style="color:var(--muted)">Free. Works offline.</p>
     <p>${installSteps()}</p>`);
 }
 
