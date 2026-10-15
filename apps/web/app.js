@@ -882,6 +882,71 @@ function openAuthGate() {
   d.querySelector("#gate-in").onclick = () => authAction("in");
 }
 
+/* Player: progress + timestamps, mute, fullscreen, keyboard, announcements.
+   Simulated clock until real media arrives — states (loading/playing/paused/
+   error) and controls are real and stay identical for real streams. */
+const PB = { id: null, kind: "", dur: 0, pos: 0, playing: false, muted: false, timer: null, master: null };
+const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+function announce(state) {
+  document.getElementById("player-state").textContent = state;
+}
+function paintPlayer() {
+  document.getElementById("player-cur").textContent = fmt(PB.pos);
+  document.getElementById("player-dur").textContent = fmt(PB.dur);
+  document.getElementById("player-bar").value = PB.dur ? Math.round((100 * PB.pos) / PB.dur) : 0;
+  document.querySelector('[data-act="toggle"]').textContent = PB.playing ? "⏸" : "⏯";
+  document.querySelector('[data-act="mute"]').textContent = PB.muted ? "🔇" : "🔊";
+}
+function pbTick() {
+  clearInterval(PB.timer);
+  PB.timer = setInterval(() => {
+    if (!PB.playing) return;
+    PB.pos += 1;
+    if (PB.id && PB.kind === "message") {
+      const m = DB.messages.find((x) => x.id === PB.id);
+      if (m && PB.pos >= m.durationSec - 15) {
+        const p = store.progress;
+        delete p[PB.id];
+        store.progress = p;
+        pbStop();
+        openFinished(PB.id);
+        return;
+      }
+      if (m) {
+        const p = store.progress;
+        p[PB.id] = { pos: PB.pos };
+        store.progress = p;
+      }
+    }
+    paintPlayer();
+  }, 1000);
+}
+function pbStop() {
+  PB.playing = false;
+  clearInterval(PB.timer);
+  paintPlayer();
+}
+function pbToggle() {
+  if (!PB.id) return;
+  PB.playing = !PB.playing;
+  announce(PB.playing ? "Playing" : "Paused");
+  paintPlayer();
+}
+function pbSeek(to) {
+  if (!PB.id) return;
+  PB.pos = Math.max(0, Math.min(PB.dur, to));
+  if (PB.kind === "message") {
+    const p = store.progress;
+    p[PB.id] = { pos: PB.pos };
+    store.progress = p;
+  }
+  paintPlayer();
+}
+function pbError(text) {
+  pbStop();
+  announce("Playback error");
+  document.getElementById("player-title").textContent = text;
+}
 function playTrack(id, isVideo) {
   if (!SB_USER) {
     pendingPlay = { id, isVideo };
@@ -890,32 +955,67 @@ function playTrack(id, isVideo) {
   }
   const m = DB.messages.find((x) => x.id === id);
   const song = DB.songs.find((x) => x.id === id);
-  const title = m ? `${m.title} — ${m.speaker}` : song ? `♪ ${song.title}` : id;
+  if (!m && !song) { pbError("That item is no longer available."); return; }
+  const title = m ? `${m.title} — ${m.speaker}` : `♪ ${song.title}`;
+  PB.id = id;
+  PB.kind = m ? "message" : "song";
+  PB.dur = m ? m.durationSec : song.durationSec;
+  PB.pos = m && store.progress[id] ? store.progress[id].pos || 0 : 0;
+  PB.playing = false;
   const bar = document.getElementById("player");
   bar.hidden = false;
   document.getElementById("player-title").textContent = title + (isVideo ? " (preview — test data)" : "");
-  track("playback_started", { id, kind: m ? "message" : "song" });
-  if (m) {
-    // Simulate progress so Continue Watching fills in
-    const timer = setInterval(() => {
-      const p = store.progress;
-      const cur = (p[id]?.pos || 0) + 30;
-      if (cur >= m.durationSec - 15) { delete p[id]; store.progress = p; clearInterval(timer); openFinished(id); return; }
-      p[id] = { pos: cur };
-      store.progress = p;
-    }, 4000);
-    bar.dataset.timer = timer;
-  }
+  announce("Loading…");
+  paintPlayer();
+  track("playback_started", { id, kind: PB.kind });
+  clearTimeout(playTrack._t);
+  playTrack._t = setTimeout(() => {
+    if (PB.id !== id) return; // user moved on
+    PB.playing = true;
+    announce("Playing");
+    paintPlayer();
+    pbTick();
+  }, 700);
 }
+document.getElementById("player-bar").addEventListener("input", (e) => {
+  pbSeek(Math.round((PB.dur * +e.target.value) / 100));
+});
 document.getElementById("player").addEventListener("click", (e) => {
   const act = e.target.closest("button")?.dataset.act;
   if (!act) return;
   if (act === "close") {
     document.getElementById("player").hidden = true;
-    clearInterval(+document.getElementById("player").dataset.timer);
+    announce("Stopped");
+    pbStop();
+    PB.id = null;
+  }
+  if (act === "toggle") pbToggle();
+  if (act === "mute") {
+    PB.muted = !PB.muted;
+    if (PB.master) PB.master.gain.value = PB.muted ? 0 : 1;
+    document.querySelectorAll("audio[data-pv-audio]").forEach((a) => (a.muted = PB.muted));
+    announce(PB.muted ? "Muted" : "Unmuted");
+    paintPlayer();
+  }
+  if (act === "full") {
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    else document.documentElement.requestFullscreen?.().catch(() => announce("Fullscreen unavailable"));
   }
   if (act === "next" && queue.ids.length) { queue.i = Math.min(queue.ids.length - 1, queue.i + 1); playTrack(queue.ids[queue.i]); }
   if (act === "prev" && queue.ids.length) { queue.i = Math.max(0, queue.i - 1); playTrack(queue.ids[queue.i]); }
+});
+/* Keyboard: Space/K play-pause · M mute · F fullscreen · ←/→ seek · Esc close.
+   Ignored while typing. */
+document.addEventListener("keydown", (e) => {
+  const tag = (e.target.tagName || "").toLowerCase();
+  if (tag === "input" || tag === "textarea" || e.target.isContentEditable) return;
+  if (document.getElementById("player").hidden || !PB.id) return;
+  if (e.code === "Space" || e.key === "k") { e.preventDefault(); pbToggle(); }
+  else if (e.key === "m") document.querySelector('[data-act="mute"]').click();
+  else if (e.key === "f") document.querySelector('[data-act="full"]').click();
+  else if (e.key === "ArrowRight") pbSeek(PB.pos + 30);
+  else if (e.key === "ArrowLeft") pbSeek(PB.pos - 30);
+  else if (e.key === "Escape") document.querySelector('[data-act="close"]').click();
 });
 
 /* ---- Hover previews: 60s message trailers, seconds-long music previews ----
@@ -927,6 +1027,11 @@ let pvTimer = null, pvClose = null, pvHover = null, audioCtx = null, audioNodes 
 function ensureCtx() {
   if (!audioCtx) { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch { /* no audio */ } }
   if (audioCtx && audioCtx.state === "suspended") audioCtx.resume().catch(() => {});
+  if (audioCtx && !PB.master) {
+    PB.master = audioCtx.createGain();
+    PB.master.gain.value = PB.muted ? 0 : 1;
+    PB.master.connect(audioCtx.destination);
+  }
 }
 window.addEventListener("pointerdown", ensureCtx, { once: false });
 window.addEventListener("keydown", ensureCtx);
@@ -946,7 +1051,8 @@ function jingle(songId, seconds) {
     g.gain.setValueAtTime(0, t0 + i);
     g.gain.linearRampToValueAtTime(0.18, t0 + i + 0.08);
     g.gain.exponentialRampToValueAtTime(0.001, t0 + i + 0.95);
-    o.connect(g).connect(audioCtx.destination);
+    o.connect(g);
+    g.connect(PB.master || audioCtx.destination);
     o.start(t0 + i);
     o.stop(t0 + i + 1);
     audioNodes.push(o);
@@ -1024,7 +1130,8 @@ function showMusic(songId, anchor) {
   if (real) {
     const a = new Audio(real);
     a.dataset.pvAudio = "1";
-    a.play().catch(() => {});
+    a.muted = PB.muted;
+    a.play().catch(() => announce("Preview unavailable"));
   } else {
     jingle(songId, MUSIC_PREVIEW_SEC);
   }
@@ -1071,7 +1178,29 @@ window.addEventListener("scroll", () => { if (document.getElementById("preview")
 window.addEventListener("keydown", (e) => { if (e.key === "Escape") stopPreview(); });
 
 function updateOnline() {
-  document.getElementById("offline-bar").hidden = navigator.onLine;
+  const off = !navigator.onLine;
+  document.getElementById("offline-bar").hidden = !off;
+  if (off) track("offline", {});
+}
+/* Honest offline: shell + saved catalog text work offline; previews and
+   checkout need connection. Retry re-runs the boot load. */
+async function retryBoot() {
+  const label = document.getElementById("offline-text");
+  if (label) label.textContent = "Retrying…";
+  try {
+    const [db, manifest] = await Promise.all([
+      fetch("data/seed.json").then((r) => { if (!r.ok) throw new Error("seed"); return r.json(); }),
+      fetch("media/manifest.json").then((r) => r.json()).catch(() => ({ artwork: {}, trailers: {}, previews: {} })),
+    ]);
+    DB = db;
+    MANIFEST = { artwork: {}, trailers: {}, previews: {}, ...manifest };
+    await mergeCloudCatalog();
+    updateOnline();
+    render();
+    track("online_retry_ok", {});
+  } catch {
+    if (label) label.textContent = "Still offline — saved content below. Previews need connection.";
+  }
 }
 window.addEventListener("online", updateOnline);
 window.addEventListener("offline", updateOnline);
@@ -1189,6 +1318,7 @@ async function mergeCloudCatalog() {
 }
 
   updateOnline();
+  document.getElementById("offline-retry").onclick = retryBoot;
   ensureAvatar();
   ensureTvButton();
   ensureDrawer();
@@ -2106,9 +2236,9 @@ function renderPicker() {
       <div style="font-size:34px;font-weight:800;color:var(--gold)">${esc(p.name[0])}</div>${esc(p.name)} ${locked ? "🔒" : ""}</button>`);
     t.onclick = () => enterProfile(p.id);
     const row = el(`<div style="display:flex;gap:6px"></div>`);
-    const gear = el(`<button class="btn" style="font-size:13px;padding:6px 12px">${locked ? "PIN ⚙" : "Set PIN 🔓"}</button>`);
+    const gear = el(`<button class="btn" style="font-size:14px;padding:10px 16px">${locked ? "PIN ⚙" : "Set PIN 🔓"}</button>`);
     gear.onclick = (e) => { e.stopPropagation(); managePin(p.id); };
-    const del = el(`<button class="btn" style="font-size:13px;padding:6px 12px" aria-label="Delete profile">✕</button>`);
+    const del = el(`<button class="btn" style="font-size:14px;padding:10px 16px" aria-label="Delete profile">✕</button>`);
     del.onclick = (e) => {
       e.stopPropagation();
       if (confirm(`Delete ${p.name}'s profile and all their saved data on this device?`)) {

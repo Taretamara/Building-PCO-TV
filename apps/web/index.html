@@ -19,15 +19,23 @@
 </header>
 <main id="screen"></main>
 <div id="player" hidden>
+  <div id="player-state" role="status" aria-live="polite">Stopped</div>
   <div id="player-title">Now playing</div>
+  <div class="player-seek">
+    <span id="player-cur">0:00</span>
+    <input id="player-bar" type="range" min="0" max="100" value="0" step="1" aria-label="Seek">
+    <span id="player-dur">0:00</span>
+  </div>
   <div class="player-row">
     <button data-act="prev" aria-label="Previous">⏮</button>
     <button data-act="toggle" aria-label="Play or pause">⏯</button>
     <button data-act="next" aria-label="Next">⏭</button>
+    <button data-act="mute" aria-label="Mute or unmute">🔊</button>
+    <button data-act="full" aria-label="Fullscreen">⛶</button>
     <button data-act="close" aria-label="Close player">✕</button>
   </div>
 </div>
-<div id="offline-bar" hidden>You are offline — showing saved content.</div>
+<div id="offline-bar" hidden><span id="offline-text">You are offline — browsing saved content. Previews need connection.</span> <button id="offline-retry">Retry</button></div>
 <footer class="legal-footer">
   <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a> · <a href="support.html">Support</a>
   <div>© 2026 PCO TV · Demo content © LoveWorld</div>
