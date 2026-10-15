@@ -168,8 +168,17 @@ function commentListHtml(msgId) {
 }
 
 /* Reflections need an account (spam control). Guests read freely; posting
-   or Amen-ing opens the signup gate, then completes the action. */
+   or Amen-ing opens the signup gate, then completes the action.
+   Same for favorites, saves, and follows — nothing personal without login. */
 let pendingComment = null;
+let pendingReturnId = null;
+
+function needAuth(detailId) {
+  if (SB_USER) return true;
+  pendingReturnId = detailId || null;
+  openAuthGate();
+  return false;
+}
 
 function wireComments(scope, msgId, rerender) {
   scope.querySelectorAll("[data-amen]").forEach((b) => (b.onclick = () => {
@@ -404,6 +413,7 @@ function Programs(s) {
     s.append(sec);
   });
   s.querySelectorAll("[data-follow]").forEach((b) => (b.onclick = () => {
+    if (!needAuth(null)) return;
     const f = store.follows, id = b.dataset.follow;
     store.follows = f.includes(id) ? f.filter((x) => x !== id) : [...f, id];
     render();
@@ -529,6 +539,7 @@ function openDetail(id) {
     playTrack(id, true);
   };
   d.querySelector("[data-fav]").onclick = () => {
+    if (!needAuth(id)) return;
     const f = store.favs;
     const adding = !f.includes(id);
     store.favs = adding ? [...f, id] : f.filter((x) => x !== id);
@@ -536,6 +547,7 @@ function openDetail(id) {
     openDetail(id);
   };
   d.querySelector("[data-save]").onclick = () => {
+    if (!needAuth(id)) return;
     const v = store.saved;
     store.saved = v.includes(id) ? v.filter((x) => x !== id) : [...v, id];
     openDetail(id);
@@ -1324,6 +1336,11 @@ async function afterAuth() {
     try { postComment(pc.msgId, pc.text); } catch { /* session not ready */ }
     openDetail(pc.msgId);
     return;
+  }
+  if (pendingReturnId) {
+    const rid = pendingReturnId;
+    pendingReturnId = null;
+    if (rid) { openDetail(rid); return; }
   }
   if (pendingPlay) renderPicker(); // choose a profile — playback starts on entry
   else render();
