@@ -600,8 +600,19 @@ function Music(s) {
 
 function Live(s) {
   const now = DB.live.filter((l) => l.status === "live");
-  const up = DB.live.filter((l) => l.status === "scheduled");
+  const up = [...DB.live.filter((l) => l.status === "scheduled")]
+    .sort((a, b) => (a.scheduledAt > b.scheduledAt ? 1 : -1));
   const rec = DB.live.filter((l) => l.status === "ended");
+  // Now & Next strip: what's on (or the gap) + what's coming with times.
+  const next = up[0];
+  const guide = el(`<div class="detail" style="margin-top:14px">
+    <div style="display:flex;gap:18px;flex-wrap:wrap">
+      <div><div class="kicker">NOW</div><b>${now.length ? esc(now[0].title) : "—"}</b>
+      <div style="color:var(--muted);font-size:13px">${now.length ? "On air" : "Nothing live"}</div></div>
+      <div><div class="kicker">NEXT</div><b>${next ? esc(next.title) : "—"}</b>
+      <div style="color:var(--muted);font-size:13px">${next ? new Date(next.scheduledAt).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "TBA"}</div></div>
+    </div></div>`);
+  s.append(guide);
   if (!now.length) {
     s.append(el(`<div class="empty" style="margin-top:14px"><b style="color:var(--text)">${t("Nothing is live right now.")}</b><br>Catch up below.</div>`));
   }
@@ -992,6 +1003,7 @@ document.getElementById("player").addEventListener("click", (e) => {
   if (act === "toggle") pbToggle();
   if (act === "mute") {
     PB.muted = !PB.muted;
+    saveSettings({ ...appSettings(), muted: PB.muted });
     if (PB.master) PB.master.gain.value = PB.muted ? 0 : 1;
     document.querySelectorAll("audio[data-pv-audio]").forEach((a) => (a.muted = PB.muted));
     announce(PB.muted ? "Muted" : "Unmuted");
@@ -1182,6 +1194,17 @@ function updateOnline() {
   document.getElementById("offline-bar").hidden = !off;
   if (off) track("offline", {});
 }
+/* Tapping the offline text explains exactly what still works. */
+document.getElementById("offline-text")?.addEventListener("click", () => {
+  if (!DB) return;
+  const n = (c) => DB[c].length;
+  openSheet("Offline", `
+    <p style="color:var(--muted)">Saved on this device and playable offline:</p>
+    <div class="chips"><span class="amen">${n("messages")} messages</span>
+    <span class="amen">${n("playlists")} playlists</span>
+    <span class="amen">${n("programs")} programs</span></div>
+    <p style="color:var(--muted)">Previews, checkout, and sync need connection and resume automatically.</p>`);
+});
 /* Honest offline: shell + saved catalog text work offline; previews and
    checkout need connection. Retry re-runs the boot load. */
 async function retryBoot() {
@@ -2103,6 +2126,7 @@ function saveSettings(s) { localStorage.setItem("pco.settings", JSON.stringify(s
 function applySettings() {
   const s = appSettings();
   document.documentElement.dataset.theme = s.theme === "light" ? "light" : "dark";
+  PB.muted = s.muted === true;
   let ov = document.getElementById("bright");
   if (s.brightness > 0) {
     if (!ov) {
